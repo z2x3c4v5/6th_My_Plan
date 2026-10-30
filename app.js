@@ -3,7 +3,7 @@
  * - 음성 출력: Web Speech API (SpeechSynthesis)
  * - 단어 클릭: 단어 발음 + 뜻 풍선(popup)
  * - 실제 사진: 위키백과 대표 사진 (못 불러오면 이모지)
- * - 활동 카드: 카드마다 "언제 할까요?" 버튼 → 그 질문의 내 계획으로 연습하기에 담기
+ * - 활동 카드: 질문 5개 중 하나를 고르고 카드의 [선택] → 말풍선 대화와 연습하기에 바로 반영
  * - 연습: 나의 계획표 + 줄마다 말하기 + 역할극(A/B) 채점 + 친구 인터뷰 기록
  * ========================================================= */
 
@@ -296,10 +296,13 @@ function toast(msg) {
 }
 
 /* ===========================================================
- * 🎨 활동 카드 (카드마다 "언제 할까요?" → 연습하기에 담기)
+ * 🎨 활동 카드
+ * - 위: 질문 5개 중 하나를 고르면 말풍선 대화(질문 + 내 대답)가 바로 바뀜
+ * - 아래: 카드의 [선택] → 고른 질문의 대답이 되고, 연습하기에도 그대로 담김
  * =========================================================== */
 let actCat = "all";
-let actTime = "all";
+let recOnly = false;   // ⭐ 지금 질문에 어울리는 활동만 보기
+let curTime = 0;       // 지금 고른 질문 (TIMES 인덱스)
 
 function renderActivityFilters() {
   const catWrap = document.getElementById("act-cat-switch");
@@ -311,79 +314,119 @@ function renderActivityFilters() {
     b.addEventListener("click", () => { actCat = c.key; synth.cancel(); hidePopup(); renderActivityFilters(); renderActivities(); });
     catWrap.appendChild(b);
   });
-  const timeWrap = document.getElementById("act-time-filter");
-  timeWrap.innerHTML = "";
-  timeWrap.appendChild(makeChip("🌈 언제든지", "with", actTime === "all", () => { actTime = "all"; renderActivityFilters(); renderActivities(); }));
-  TIMES.forEach(t => {
-    timeWrap.appendChild(makeChip(`${t.emoji} ${t.en}`, "with", actTime === t.key, () => {
-      actTime = t.key; renderActivityFilters(); renderActivities();
-    }));
-  });
+  const t = TIMES[curTime];
+  const rec = document.createElement("button");
+  rec.className = "cat-btn rec-toggle" + (recOnly ? " active" : "");
+  rec.textContent = `⭐ ${t.short}에 어울리는 것만`;
+  rec.addEventListener("click", () => { recOnly = !recOnly; renderActivityFilters(); renderActivities(); });
+  catWrap.appendChild(rec);
 }
 
-function makeTimePicker(a) {
-  const wrap = document.createElement("div");
-  wrap.className = "time-pick";
-  const lab = document.createElement("div");
-  lab.className = "tp-label";
-  lab.textContent = "🎯 언제 할까요? (눌러서 연습하기에 담기)";
-  const row = document.createElement("div");
-  row.className = "tp-row";
-  TIMES.forEach(t => {
+/* 위쪽: 질문 고르기 + 말풍선 대화 */
+function renderPlanPanel() {
+  const t = TIMES[curTime];
+  const a = planAct(t.key);
+  const qTabs = document.getElementById("q-tabs");
+  qTabs.innerHTML = "";
+  TIMES.forEach((x, i) => {
+    const xa = planAct(x.key);
     const b = document.createElement("button");
-    b.className = "tp-btn" + (a.when.includes(t.key) ? " rec" : "");
-    b.dataset.act = a.id;
-    b.dataset.time = t.key;
-    b.title = questionEn(t);
-    b.textContent = `${a.when.includes(t.key) ? "⭐ " : ""}${t.emoji} ${t.short}`;
-    b.addEventListener("click", () => pickPlan(t, a));
-    row.appendChild(b);
+    b.className = "q-tab" + (i === curTime ? " active" : "") + (xa ? " done" : "");
+    b.innerHTML = `<span class="q-num">Q${i + 1}</span><span class="q-emoji">${xa ? xa.emoji : x.emoji}</span><span class="q-when">${x.short}${xa ? " ✓" : ""}</span>`;
+    b.addEventListener("click", () => selectTime(i));
+    qTabs.appendChild(b);
   });
-  wrap.append(lab, row);
-  return wrap;
+
+  const q = document.getElementById("pp-q");
+  q.innerHTML = ""; q.appendChild(buildWords(questionEn(t)));
+  document.getElementById("pp-q-ko").textContent = questionKo(t);
+  setBlank("pp-act", a && a.en);
+  document.getElementById("pp-act-ko").textContent = a ? answerKo(a) : "나는 ________ 거야.";
+  document.getElementById("pp-answer-row").classList.toggle("empty", !a);
+
+  const status = document.getElementById("pp-status");
+  const n = doneCount();
+  status.className = "dlg-status" + (a ? " ok" : "");
+  if (!a) status.textContent = `👇 아래 카드에서 ${t.short}에 할 일을 골라 [선택]을 눌러요`;
+  else if (n < TIMES.length) status.textContent = `✅ 연습하기에 담았어요! (${n}/${TIMES.length}) 다음 질문으로 가 볼까요?`;
+  else status.textContent = `🎉 질문 5개 모두 완성! 🎤 연습하기에서 말해 봐요.`;
+
+  document.getElementById("pp-listen").disabled = !a;
+  document.getElementById("pp-next").textContent = curTime < TIMES.length - 1 ? "다음 질문 ▶" : "처음 질문으로 ↺";
+  document.getElementById("pp-go").disabled = n === 0;
+  updatePlanBadge();
 }
 
-function pickPlan(t, a) {
-  const prev = planAct(t.key);
-  if (prev && prev.id === a.id) {
+function selectTime(i) {
+  curTime = i;
+  synth.cancel();
+  renderPlanPanel();
+  if (recOnly) { renderActivityFilters(); renderActivities(); }
+  else { renderActivityFilters(); refreshPickers(); }
+  speak(questionEn(TIMES[i]));
+}
+
+function pickPlan(a) {
+  const t = TIMES[curTime];
+  if (plans[t.key] === a.id) {
     delete plans[t.key];
-    toast(`${t.emoji} ${t.short} 계획을 뺐어요.`);
+    toast(`${t.emoji} ${t.short} 대답을 뺐어요.`);
   } else {
     plans[t.key] = a.id;
-    toast(prev
-      ? `${t.emoji} ${t.short} 계획을 바꿨어요: ${prev.en} → ${a.en}`
-      : `${t.emoji} ${t.short}: I'm going to ${a.en}. 연습하기에 담았어요!`);
+    toast(`${t.emoji} ${t.short} · I'm going to ${a.en}. → 🎤 연습하기에 담았어요!`);
     speak(`${questionEn(t)} ${answerEn(a)}`);
   }
   persist();
+  renderPlanPanel();
   refreshPickers();
 }
 
-/* 사진을 다시 불러오지 않도록 버튼 색만 바꿔요 */
+/* 사진을 다시 불러오지 않도록 버튼 · 표시만 바꿔요 */
 function refreshPickers() {
-  document.querySelectorAll(".tp-btn").forEach(b => {
-    b.classList.toggle("on", plans[b.dataset.time] === b.dataset.act);
-  });
+  const t = TIMES[curTime];
   document.querySelectorAll("#activity-grid .card").forEach(c => {
-    c.classList.toggle("picked", !!c.querySelector(".tp-btn.on"));
+    const a = findAct(c.dataset.act);
+    const on = plans[t.key] === a.id;
+    c.classList.toggle("picked", on);
+    const btn = c.querySelector(".pick-btn");
+    btn.classList.toggle("on", on);
+    btn.textContent = on ? `✓ ${t.short} 대답으로 선택됨` : `✅ ${t.short}에 할래요`;
+    const tag = c.querySelector(".card-tag");
+    tag.textContent = catLabel(a.cat) + (a.when.includes(t.key) ? " · ⭐" : "");
   });
-  updatePlanBadge();
 }
 
 function renderActivities() {
   const grid = document.getElementById("activity-grid");
   grid.innerHTML = "";
+  const t = TIMES[curTime];
   const list = ACTIVITIES.filter(a =>
-    (actCat === "all" || a.cat === actCat) && (actTime === "all" || a.when.includes(actTime)));
+    (actCat === "all" || a.cat === actCat) && (!recOnly || a.when.includes(t.key)));
   list.forEach((a, i) => {
-    grid.appendChild(makeCard(
+    const btn = document.createElement("button");
+    btn.className = "pick-btn";
+    btn.addEventListener("click", () => pickPlan(a));
+    const card = makeCard(
       { en: answerEn(a), ko: answerKo(a), emoji: a.emoji, wiki: a.wiki, photo: a.photo },
-      { tone: i % 6, tag: catLabel(a.cat), extra: makeTimePicker(a) }
-    ));
+      { tone: i % 6, tag: catLabel(a.cat), extra: btn }
+    );
+    card.dataset.act = a.id;
+    grid.appendChild(card);
   });
   document.getElementById("activity-count").textContent = `${list.length}개`;
   refreshPickers();
 }
+
+document.getElementById("pp-speak-q").addEventListener("click", () => speak(questionEn(TIMES[curTime])));
+document.getElementById("pp-speak-a").addEventListener("click", () => {
+  const a = planAct(TIMES[curTime].key); if (a) speak(answerEn(a));
+});
+document.getElementById("pp-listen").addEventListener("click", () => {
+  const t = TIMES[curTime], a = planAct(t.key);
+  if (a) speak(`${questionEn(t)} ${answerEn(a)}`);
+});
+document.getElementById("pp-next").addEventListener("click", () => selectTime((curTime + 1) % TIMES.length));
+document.getElementById("pp-go").addEventListener("click", () => document.querySelector('.tab-btn[data-tab="practice"]').click());
 
 /* ===========================================================
  * 💬 대답하기 (빈칸 채우기 + 맞장구)
@@ -485,7 +528,7 @@ function renderPlanSummary() {
     if (a) {
       const del = document.createElement("button");
       del.className = "premove"; del.textContent = "✕"; del.title = "계획 빼기";
-      del.addEventListener("click", () => { delete plans[t.key]; persist(); refreshPickers(); renderPractice(); });
+      del.addEventListener("click", () => { delete plans[t.key]; persist(); renderPlanPanel(); refreshPickers(); renderPractice(); });
       tools.appendChild(del);
     }
     row.append(when, body, visual, tools);
@@ -783,6 +826,7 @@ function renderPractice() {
 
 /* ---------- 초기 렌더 ---------- */
 function renderAll() {
+  renderPlanPanel();
   renderActivityFilters();
   renderActivities();
   renderAnswer();
