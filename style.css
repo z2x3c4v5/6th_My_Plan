@@ -783,3 +783,8 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 .ps-label { font-size: 0.75rem; font-weight: 800; color: var(--muted); }
 .ps-val { font-size: 1.15rem; color: var(--primary-dark); }
 .pstats .avg { color: #2563eb; }
+.plan-body { min-width: 0; }
+@media (max-width: 560px) {
+  .plan-mic .pstats { white-space: normal; }
+  .ps-item { min-width: 0; flex: 1; padding: 6px 8px; }
+}
