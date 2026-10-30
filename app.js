@@ -2,7 +2,7 @@
  * 6학년 9단원 · What are you going to do? · 나의 계획 말하기 웹 앱
  * - 음성 출력: Web Speech API (SpeechSynthesis)
  * - 단어 클릭: 단어 발음 + 뜻 풍선(popup)
- * - 실제 사진: 위키백과 대표 사진 (못 불러오면 이모지)
+ * - 그림: Canva로 만든 활동 그림 images/활동id.png (없으면 이모지)
  * - 활동 카드(초급 · 중급): 질문 5개 중 하나를 고르고 카드의 [선택] → 말풍선 대화와 연습하기에 바로 반영
  * - 연습하기: 나의 계획표 (My Plans) · 인쇄
  * ========================================================= */
@@ -97,50 +97,11 @@ function buildWords(sentence) {
 }
 
 /* ===========================================================
- * 📷 실제 사진 (위키백과 대표 사진)
- * - 한 번에 여러 문서의 사진 주소를 받아 와서 브라우저에 7일 동안 저장
- * - 인터넷이 안 되거나 사진이 없으면 이모지 그림이 그대로 보여요
+ * 🖼️ 그림 (Canva로 만든 그림: images/활동id.png)
+ * - 그림 파일이 없거나 못 불러오면 이모지 그림이 그대로 보여요
  * =========================================================== */
-const PHOTO_CACHE_KEY = "plan_photos_v1";
-const PHOTO_CACHE_DAYS = 7;
-let photoOn = true;
-let photoMap = {};
-try {
-  photoOn = localStorage.getItem("plan_photo_on") !== "0";
-  const c = JSON.parse(localStorage.getItem(PHOTO_CACHE_KEY) || "null");
-  if (c && c.map && Date.now() - c.t < PHOTO_CACHE_DAYS * 864e5) photoMap = c.map;
-} catch (e) {}
+const imgSrc = item => item.photo || (item.id ? `images/${item.id}.png` : "");
 
-let photoPromise = null;
-function fetchPhotos() {
-  if (photoPromise) return photoPromise;
-  const titles = [...new Set([...TIMES, ...ACTIVITIES].filter(x => x.wiki && !x.photo).map(x => x.wiki))];
-  const need = titles.filter(t => !(t in photoMap));
-  if (!need.length) return (photoPromise = Promise.resolve(photoMap));
-  const chunks = [];
-  for (let i = 0; i < need.length; i += 20) chunks.push(need.slice(i, i + 20));
-  photoPromise = Promise.all(chunks.map(ch => {
-    const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1" +
-      "&prop=pageimages&piprop=thumbnail&pithumbsize=480&titles=" + encodeURIComponent(ch.join("|"));
-    return fetch(url).then(r => r.json()).then(data => {
-      const q = data.query || {};
-      const back = {}; // 위키백과가 바꾼 제목 → 처음 요청한 제목
-      ch.forEach(t => { back[t] = t; });
-      (q.normalized || []).forEach(n => { back[n.to] = back[n.from] || n.from; });
-      (q.redirects || []).forEach(r => { back[r.to] = back[r.from] || r.from; });
-      Object.values(q.pages || {}).forEach(p => {
-        const orig = back[p.title];
-        if (orig) photoMap[orig] = p.thumbnail ? p.thumbnail.source : "";
-      });
-    }).catch(() => {});
-  })).then(() => {
-    try { localStorage.setItem(PHOTO_CACHE_KEY, JSON.stringify({ t: Date.now(), map: photoMap })); } catch (e) {}
-    return photoMap;
-  });
-  return photoPromise;
-}
-
-/* 이모지 타일 위에 사진을 얹어요 (사진을 못 불러오면 이모지가 남음) */
 function makeVisual(item, cls) {
   const box = document.createElement("div");
   box.className = "visual" + (cls ? " " + cls : "");
@@ -148,21 +109,16 @@ function makeVisual(item, cls) {
   em.className = "emoji";
   em.textContent = item.emoji;
   box.appendChild(em);
-  if (!photoOn) return box;
-  const apply = src => {
-    if (!src) return;
-    const img = new Image();
-    img.className = "photo";
-    img.alt = item.en || "";
-    img.decoding = "async";
-    img.addEventListener("load", () => box.classList.add("has-photo"));
-    img.addEventListener("error", () => img.remove());
-    img.src = src;
-    if (item.wiki && !item.photo) box.title = "사진: Wikipedia · " + item.wiki;
-    box.appendChild(img);
-  };
-  if (item.photo) apply(item.photo);
-  else if (item.wiki) fetchPhotos().then(m => apply(m[item.wiki]));
+  const src = imgSrc(item);
+  if (!src) return box;
+  const img = new Image();
+  img.className = "photo";
+  img.alt = item.en || "";
+  img.decoding = "async";
+  img.addEventListener("load", () => box.classList.add("has-photo"));
+  img.addEventListener("error", () => img.remove());
+  img.src = src;
+  box.appendChild(img);
   return box;
 }
 
@@ -415,7 +371,7 @@ function createBoard(root, level) {
       btn.className = "pick-btn";
       btn.addEventListener("click", () => pickPlan(a));
       const card = makeCard(
-        { en: answerEn(a, level), ko: answerKo(a, level), emoji: a.emoji, wiki: a.wiki, photo: a.photo },
+        { id: a.id, en: answerEn(a, level), ko: answerKo(a, level), emoji: a.emoji, photo: a.photo },
         { tone: i % 6, tag: catLabel(a.cat), extra: btn }
       );
       card.dataset.act = a.id;
@@ -517,17 +473,6 @@ function renderAll() {
   renderPlanSummary();
 }
 renderAll();
-
-/* ---------- 사진 켜기/끄기 ---------- */
-const photoBtn = document.getElementById("photo-toggle");
-function updatePhotoBtn() { photoBtn.textContent = photoOn ? "📷 실제 사진 켜짐" : "😀 그림(이모지)으로 보기"; }
-updatePhotoBtn();
-photoBtn.addEventListener("click", () => {
-  photoOn = !photoOn;
-  try { localStorage.setItem("plan_photo_on", photoOn ? "1" : "0"); } catch (e) {}
-  updatePhotoBtn();
-  renderAll();
-});
 
 /* ---------- 탭 전환 ---------- */
 document.querySelectorAll(".tab-btn").forEach(btn => {

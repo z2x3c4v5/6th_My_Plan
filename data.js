@@ -9,20 +9,19 @@
  *      clean my room · study math · visit my grandparents
  * - 단어 뜻 사전
  *
- *  ※ 사진: wiki 항목 = 영어 위키백과 문서 제목.
- *    브라우저에서 위키백과 대표 사진(실제 사진)을 불러오고,
- *    못 불러오면 이모지 그림으로 보여 줘요.
- *    직접 찍은 사진을 쓰려면 images 폴더에 넣고 photo: "images/파일.jpg" 를 추가하세요.
+ *  ※ 그림: images/활동id.png (Canva로 만든 그림, 예: images/kite.png)
+ *    그림이 없으면 이모지로 보여 줘요. 다른 그림을 쓰려면 같은 이름으로 바꾸거나
+ *    photo: "images/파일.jpg" 를 추가하세요.
  * - 활동 카드에서 고른 계획(5칸) · 인터뷰 기록 · 연습 기록은 app.js 에서 localStorage 에 저장
  * ========================================================= */
 
 /* ===== 질문 5개 (언제?) ===== */
 const TIMES = [
-  { key: "afternoon", en: "this afternoon",       ko: "오늘 오후에",     short: "오늘 오후", emoji: "🌤️", wiki: "Playground" },
-  { key: "tonight",   en: "tonight",              ko: "오늘 밤에",       short: "오늘 밤",   emoji: "🌙", wiki: "Night sky" },
-  { key: "tomorrow",  en: "tomorrow",             ko: "내일",            short: "내일",      emoji: "🌅", wiki: "Sunrise" },
-  { key: "weekend",   en: "this weekend",         ko: "이번 주말에",     short: "이번 주말", emoji: "🗓️", wiki: "Seoul Forest" },
-  { key: "vacation",  en: "this winter vacation", ko: "이번 겨울방학에", short: "겨울방학",  emoji: "🧳", wiki: "Suitcase" },
+  { key: "afternoon", en: "this afternoon",       ko: "오늘 오후에",     short: "오늘 오후", emoji: "🌤️" },
+  { key: "tonight",   en: "tonight",              ko: "오늘 밤에",       short: "오늘 밤",   emoji: "🌙" },
+  { key: "tomorrow",  en: "tomorrow",             ko: "내일",            short: "내일",      emoji: "🌅" },
+  { key: "weekend",   en: "this weekend",         ko: "이번 주말에",     short: "이번 주말", emoji: "🗓️" },
+  { key: "vacation",  en: "this winter vacation", ko: "이번 겨울방학에", short: "겨울방학",  emoji: "🧳" },
 ];
 const questionEn = t => `What are you going to do ${t.en}?`;
 const questionKo = t => `너는 ${t.ko} 무엇을 할 거니?`;
@@ -44,75 +43,75 @@ const ACT_CATS = [
  * book: 📘 교과서 표현 */
 const ACTIVITIES = [
   // 🏠 집·학교에서
-  { id: "stayhome",  cat: "home", en: "stay home",          ko: "집에 있을",          emoji: "🏠", wiki: "House",             when: ["afternoon", "tonight", "tomorrow", "weekend", "vacation"], mid: { en: "with my family", ko: "가족과 함께" }, book: true },
-  { id: "math",      cat: "home", en: "study math",         ko: "수학 공부를 할",     emoji: "🔢", wiki: "Mathematics",       when: ["afternoon", "tonight", "tomorrow"], mid: { en: "for the test", ko: "시험을 위해" }, book: true },
-  { id: "homework",  cat: "home", en: "do my homework",     ko: "숙제를 할",          emoji: "📝", wiki: "Homework",          when: ["afternoon", "tonight", "tomorrow"], mid: { en: "with my friend", ko: "친구와 함께" } },
-  { id: "book",      cat: "home", en: "read a book",        ko: "책을 읽을",          emoji: "📖", wiki: "Book",              when: ["afternoon", "tonight", "weekend", "vacation"], mid: { en: "in my room", ko: "내 방에서" } },
-  { id: "movie",     cat: "home", en: "watch a movie",      ko: "영화를 볼",          emoji: "🎬", wiki: "Movie theater",     when: ["tonight", "weekend", "vacation"], mid: { en: "with my family", ko: "가족과 함께" } },
-  { id: "piano",     cat: "home", en: "play the piano",     ko: "피아노를 칠",        emoji: "🎹", wiki: "Piano",             when: ["afternoon", "tonight", "tomorrow"], mid: { en: "for my mom", ko: "엄마를 위해" } },
-  { id: "clean",     cat: "home", en: "clean my room",      ko: "내 방을 청소할",     emoji: "🧹", wiki: "Vacuum cleaner",    when: ["afternoon", "tomorrow", "weekend"], mid: { en: "after school", ko: "방과 후에" }, book: true },
-  { id: "draw",      cat: "home", en: "draw pictures",      ko: "그림을 그릴",        emoji: "🖍️", wiki: "Crayon",            when: ["afternoon", "tonight", "weekend"], mid: { en: "in my sketchbook", ko: "스케치북에" } },
-  { id: "cookies",   cat: "home", en: "bake cookies",       ko: "쿠키를 구울",        emoji: "🍪", wiki: "Cookie",            when: ["weekend", "vacation"], mid: { en: "with my dad", ko: "아빠와 함께" } },
-  { id: "boardgame", cat: "home", en: "play board games",   ko: "보드게임을 할",      emoji: "🎲", wiki: "Board game",        when: ["tonight", "weekend", "vacation"], mid: { en: "with my brother", ko: "형(오빠)과 함께" } },
+  { id: "stayhome",  cat: "home", en: "stay home",          ko: "집에 있을",          emoji: "🏠", when: ["afternoon", "tonight", "tomorrow", "weekend", "vacation"], mid: { en: "with my family", ko: "가족과 함께" }, book: true },
+  { id: "math",      cat: "home", en: "study math",         ko: "수학 공부를 할",     emoji: "🔢", when: ["afternoon", "tonight", "tomorrow"], mid: { en: "for the test", ko: "시험을 위해" }, book: true },
+  { id: "homework",  cat: "home", en: "do my homework",     ko: "숙제를 할",          emoji: "📝", when: ["afternoon", "tonight", "tomorrow"], mid: { en: "with my friend", ko: "친구와 함께" } },
+  { id: "book",      cat: "home", en: "read a book",        ko: "책을 읽을",          emoji: "📖", when: ["afternoon", "tonight", "weekend", "vacation"], mid: { en: "in my room", ko: "내 방에서" } },
+  { id: "movie",     cat: "home", en: "watch a movie",      ko: "영화를 볼",          emoji: "🎬", when: ["tonight", "weekend", "vacation"], mid: { en: "with my family", ko: "가족과 함께" } },
+  { id: "piano",     cat: "home", en: "play the piano",     ko: "피아노를 칠",        emoji: "🎹", when: ["afternoon", "tonight", "tomorrow"], mid: { en: "for my mom", ko: "엄마를 위해" } },
+  { id: "clean",     cat: "home", en: "clean my room",      ko: "내 방을 청소할",     emoji: "🧹", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "after school", ko: "방과 후에" }, book: true },
+  { id: "draw",      cat: "home", en: "draw pictures",      ko: "그림을 그릴",        emoji: "🖍️", when: ["afternoon", "tonight", "weekend"], mid: { en: "in my sketchbook", ko: "스케치북에" } },
+  { id: "cookies",   cat: "home", en: "bake cookies",       ko: "쿠키를 구울",        emoji: "🍪", when: ["weekend", "vacation"], mid: { en: "with my dad", ko: "아빠와 함께" } },
+  { id: "boardgame", cat: "home", en: "play board games",   ko: "보드게임을 할",      emoji: "🎲", when: ["tonight", "weekend", "vacation"], mid: { en: "with my brother", ko: "형(오빠)과 함께" } },
 
   // ⚽ 운동·놀이
-  { id: "soccer",    cat: "sports", en: "play soccer",       ko: "축구를 할",          emoji: "⚽", wiki: "Association football", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my friends", ko: "친구들과 함께" } },
-  { id: "basketball",cat: "sports", en: "play basketball",   ko: "농구를 할",          emoji: "🏀", wiki: "Basketball",        when: ["afternoon", "tomorrow", "weekend"], mid: { en: "at the park", ko: "공원에서" } },
-  { id: "bike",      cat: "sports", en: "ride my bike",      ko: "자전거를 탈",        emoji: "🚲", wiki: "Bicycle",           when: ["afternoon", "tomorrow", "weekend"], mid: { en: "along the river", ko: "강을 따라" } },
-  { id: "swim",      cat: "sports", en: "go swimming",       ko: "수영하러 갈",        emoji: "🏊", wiki: "Swimming pool",     when: ["afternoon", "tomorrow", "weekend", "vacation"], mid: { en: "with my sister", ko: "언니(누나)와 함께" } },
-  { id: "kite",      cat: "sports", en: "fly a kite",        ko: "연을 날릴",          emoji: "🪁", wiki: "Kite",              when: ["afternoon", "weekend"], mid: { en: "on the hill", ko: "언덕에서" } },
-  { id: "badminton", cat: "sports", en: "play badminton",    ko: "배드민턴을 칠",      emoji: "🏸", wiki: "Badminton",         when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my dad", ko: "아빠와 함께" } },
-  { id: "rope",      cat: "sports", en: "jump rope",         ko: "줄넘기를 할",        emoji: "🪢", wiki: "Skipping rope",     when: ["afternoon", "tomorrow"], mid: { en: "on the playground", ko: "운동장에서" } },
-  { id: "taekwondo", cat: "sports", en: "practice taekwondo",ko: "태권도를 연습할",    emoji: "🥋", wiki: "Taekwondo",         when: ["afternoon", "tomorrow"], mid: { en: "after school", ko: "방과 후에" } },
-  { id: "apples",    cat: "family", en: "pick apples",        ko: "사과를 딸",          emoji: "🍎", wiki: "Apple",             when: ["weekend"], mid: { en: "at the farm", ko: "농장에서" } },
-  { id: "leaves",    cat: "trip", en: "see autumn leaves",  ko: "단풍을 구경할",      emoji: "🍁", wiki: "Naejangsan",        when: ["weekend", "vacation"], mid: { en: "at Naejangsan", ko: "내장산에서" } },
-  { id: "chestnuts", cat: "family", en: "gather chestnuts",   ko: "밤을 주울",          emoji: "🌰", wiki: "Chestnut",          when: ["weekend"], mid: { en: "on the mountain", ko: "산에서" } },
-  { id: "roller",    cat: "sports", en: "go roller skating",  ko: "롤러스케이트를 타러 갈", emoji: "🛼", wiki: "Roller skating", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "at the park", ko: "공원에서" } },
+  { id: "soccer",    cat: "sports", en: "play soccer",       ko: "축구를 할",          emoji: "⚽", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my friends", ko: "친구들과 함께" } },
+  { id: "basketball",cat: "sports", en: "play basketball",   ko: "농구를 할",          emoji: "🏀", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "at the park", ko: "공원에서" } },
+  { id: "bike",      cat: "sports", en: "ride my bike",      ko: "자전거를 탈",        emoji: "🚲", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "along the river", ko: "강을 따라" } },
+  { id: "swim",      cat: "sports", en: "go swimming",       ko: "수영하러 갈",        emoji: "🏊", when: ["afternoon", "tomorrow", "weekend", "vacation"], mid: { en: "with my sister", ko: "언니(누나)와 함께" } },
+  { id: "kite",      cat: "sports", en: "fly a kite",        ko: "연을 날릴",          emoji: "🪁", when: ["afternoon", "weekend"], mid: { en: "on the hill", ko: "언덕에서" } },
+  { id: "badminton", cat: "sports", en: "play badminton",    ko: "배드민턴을 칠",      emoji: "🏸", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my dad", ko: "아빠와 함께" } },
+  { id: "rope",      cat: "sports", en: "jump rope",         ko: "줄넘기를 할",        emoji: "🪢", when: ["afternoon", "tomorrow"], mid: { en: "on the playground", ko: "운동장에서" } },
+  { id: "taekwondo", cat: "sports", en: "practice taekwondo",ko: "태권도를 연습할",    emoji: "🥋", when: ["afternoon", "tomorrow"], mid: { en: "after school", ko: "방과 후에" } },
+  { id: "apples",    cat: "family", en: "pick apples",        ko: "사과를 딸",          emoji: "🍎", when: ["weekend"], mid: { en: "at the farm", ko: "농장에서" } },
+  { id: "leaves",    cat: "trip", en: "see autumn leaves",  ko: "단풍을 구경할",      emoji: "🍁", when: ["weekend", "vacation"], mid: { en: "at Naejangsan", ko: "내장산에서" } },
+  { id: "chestnuts", cat: "family", en: "gather chestnuts",   ko: "밤을 주울",          emoji: "🌰", when: ["weekend"], mid: { en: "on the mountain", ko: "산에서" } },
+  { id: "roller",    cat: "sports", en: "go roller skating",  ko: "롤러스케이트를 타러 갈", emoji: "🛼", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "at the park", ko: "공원에서" } },
 
   // 📍 장소에 가기
-  { id: "pcroom",    cat: "place", en: "go to a PC room",       ko: "PC방에 갈",           emoji: "💻", wiki: "PC bang",           when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my friends", ko: "친구들과 함께" } },
-  { id: "cartoon",   cat: "place", en: "go to a cartoon café",  ko: "만화 카페에 갈",      emoji: "🗯️", wiki: "Manhwabang",        when: ["afternoon", "weekend", "vacation"], mid: { en: "to read comics", ko: "만화책을 읽으러" } },
-  { id: "karaoke",   cat: "place", en: "go to a coin karaoke",  ko: "코인노래방에 갈",     emoji: "🎤", wiki: "Karaoke box",       when: ["afternoon", "weekend"], mid: { en: "to sing K-pop songs", ko: "케이팝 노래를 부르러" } },
-  { id: "library",   cat: "place", en: "go to the library",     ko: "도서관에 갈",         emoji: "📚", wiki: "Library",           when: ["afternoon", "tomorrow", "weekend", "vacation"], mid: { en: "to borrow books", ko: "책을 빌리러" } },
-  { id: "bookstore", cat: "place", en: "go to the bookstore",   ko: "서점에 갈",           emoji: "📗", wiki: "Bookselling",       when: ["afternoon", "weekend"], mid: { en: "to buy a new book", ko: "새 책을 사러" } },
-  { id: "mall",      cat: "place", en: "go to the shopping mall", ko: "쇼핑몰에 갈",       emoji: "🛍️", wiki: "Shopping mall",     when: ["weekend", "vacation"], mid: { en: "with my mom", ko: "엄마와 함께" } },
-  { id: "bakery",    cat: "place", en: "go to the bakery",      ko: "빵집에 갈",           emoji: "🥐", wiki: "Bakery",            when: ["afternoon", "tomorrow"], mid: { en: "to buy bread", ko: "빵을 사러" } },
-  { id: "escape",    cat: "place", en: "go to an escape room",  ko: "방탈출 카페에 갈",    emoji: "🔐", wiki: "Escape room",       when: ["weekend", "vacation"], mid: { en: "with my cousins", ko: "사촌들과 함께" } },
-  { id: "trampoline",cat: "place", en: "go to a trampoline park", ko: "트램펄린 파크에 갈", emoji: "🤸", wiki: "Trampoline park",  when: ["afternoon", "weekend", "vacation"], mid: { en: "with my brother", ko: "형(오빠)과 함께" } },
-  { id: "catcafe",   cat: "place", en: "go to a cat café",      ko: "고양이 카페에 갈",    emoji: "🐱", wiki: "Cat café",          when: ["weekend", "vacation"], mid: { en: "to play with cats", ko: "고양이와 놀러" } },
-  { id: "salon",     cat: "place", en: "go to the hair salon",  ko: "미용실에 갈",         emoji: "💇", wiki: "Beauty salon",      when: ["afternoon", "tomorrow", "weekend"], mid: { en: "to get a haircut", ko: "머리를 자르러" } },
-  { id: "dentist",   cat: "place", en: "go to the dentist",     ko: "치과에 갈",           emoji: "🦷", wiki: "Dentist",           when: ["afternoon", "tomorrow"], mid: { en: "with my dad", ko: "아빠와 함께" } },
+  { id: "pcroom",    cat: "place", en: "go to a PC room",       ko: "PC방에 갈",           emoji: "💻", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my friends", ko: "친구들과 함께" } },
+  { id: "cartoon",   cat: "place", en: "go to a cartoon café",  ko: "만화 카페에 갈",      emoji: "🗯️", when: ["afternoon", "weekend", "vacation"], mid: { en: "to read comics", ko: "만화책을 읽으러" } },
+  { id: "karaoke",   cat: "place", en: "go to a coin karaoke",  ko: "코인노래방에 갈",     emoji: "🎤", when: ["afternoon", "weekend"], mid: { en: "to sing K-pop songs", ko: "케이팝 노래를 부르러" } },
+  { id: "library",   cat: "place", en: "go to the library",     ko: "도서관에 갈",         emoji: "📚", when: ["afternoon", "tomorrow", "weekend", "vacation"], mid: { en: "to borrow books", ko: "책을 빌리러" } },
+  { id: "bookstore", cat: "place", en: "go to the bookstore",   ko: "서점에 갈",           emoji: "📗", when: ["afternoon", "weekend"], mid: { en: "to buy a new book", ko: "새 책을 사러" } },
+  { id: "mall",      cat: "place", en: "go to the shopping mall", ko: "쇼핑몰에 갈",       emoji: "🛍️", when: ["weekend", "vacation"], mid: { en: "with my mom", ko: "엄마와 함께" } },
+  { id: "bakery",    cat: "place", en: "go to the bakery",      ko: "빵집에 갈",           emoji: "🥐", when: ["afternoon", "tomorrow"], mid: { en: "to buy bread", ko: "빵을 사러" } },
+  { id: "escape",    cat: "place", en: "go to an escape room",  ko: "방탈출 카페에 갈",    emoji: "🔐", when: ["weekend", "vacation"], mid: { en: "with my cousins", ko: "사촌들과 함께" } },
+  { id: "trampoline",cat: "place", en: "go to a trampoline park", ko: "트램펄린 파크에 갈", emoji: "🤸", when: ["afternoon", "weekend", "vacation"], mid: { en: "with my brother", ko: "형(오빠)과 함께" } },
+  { id: "catcafe",   cat: "place", en: "go to a cat café",      ko: "고양이 카페에 갈",    emoji: "🐱", when: ["weekend", "vacation"], mid: { en: "to play with cats", ko: "고양이와 놀러" } },
+  { id: "salon",     cat: "place", en: "go to the hair salon",  ko: "미용실에 갈",         emoji: "💇", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "to get a haircut", ko: "머리를 자르러" } },
+  { id: "dentist",   cat: "place", en: "go to the dentist",     ko: "치과에 갈",           emoji: "🦷", when: ["afternoon", "tomorrow"], mid: { en: "with my dad", ko: "아빠와 함께" } },
 
   // 👨‍👩‍👧 가족과 함께
-  { id: "grandparents", cat: "family", en: "visit my grandparents", ko: "할머니 할아버지 댁에 갈", emoji: "👵", wiki: "Grandparent", when: ["weekend", "vacation"], mid: { en: "in the countryside", ko: "시골에 계신" }, book: true },
-  { id: "camping",   cat: "family", en: "go camping",            ko: "캠핑하러 갈",        emoji: "🏕️", wiki: "Camping",           when: ["weekend", "vacation"], mid: { en: "with my family", ko: "가족과 함께" }, book: true },
-  { id: "zoo",       cat: "family", en: "go to the zoo",         ko: "동물원에 갈",        emoji: "🦒", wiki: "Zoo",               when: ["weekend", "vacation"], mid: { en: "to see pandas", ko: "판다를 보러" } },
-  { id: "amusement", cat: "family", en: "go to an amusement park", ko: "놀이공원에 갈",    emoji: "🎢", wiki: "Lotte World",       when: ["weekend", "vacation"], mid: { en: "with my cousins", ko: "사촌들과 함께" } },
-  { id: "picnic",    cat: "family", en: "have a picnic",         ko: "소풍을 갈",          emoji: "🧺", wiki: "Picnic",            when: ["weekend"], mid: { en: "at the Han River", ko: "한강으로" } },
-  { id: "fishing",   cat: "family", en: "go fishing",            ko: "낚시하러 갈",        emoji: "🎣", wiki: "Fishing",           when: ["weekend", "vacation"], mid: { en: "with my grandpa", ko: "할아버지와 함께" } },
-  { id: "aquarium",  cat: "family", en: "go to the aquarium",    ko: "아쿠아리움에 갈",    emoji: "🐠", wiki: "Public aquarium",   when: ["weekend", "vacation"], mid: { en: "to see sharks", ko: "상어를 보러" } },
-  { id: "hiking",    cat: "family", en: "go hiking",             ko: "등산하러 갈",        emoji: "🥾", wiki: "Hiking",            when: ["weekend", "vacation"], mid: { en: "with my parents", ko: "부모님과 함께" } },
-  { id: "museum",    cat: "family", en: "go to a museum",        ko: "박물관에 갈",        emoji: "🏺", wiki: "National Museum of Korea", when: ["weekend", "vacation"], mid: { en: "with my mom", ko: "엄마와 함께" } },
-  { id: "waterpark", cat: "family", en: "go to a water park",    ko: "워터파크에 갈",      emoji: "💦", wiki: "Water park",        when: ["weekend", "vacation"], mid: { en: "with my uncle", ko: "삼촌과 함께" } },
+  { id: "grandparents", cat: "family", en: "visit my grandparents", ko: "할머니 할아버지 댁에 갈", emoji: "👵", when: ["weekend", "vacation"], mid: { en: "in the countryside", ko: "시골에 계신" }, book: true },
+  { id: "camping",   cat: "family", en: "go camping",            ko: "캠핑하러 갈",        emoji: "🏕️", when: ["weekend", "vacation"], mid: { en: "with my family", ko: "가족과 함께" }, book: true },
+  { id: "zoo",       cat: "family", en: "go to the zoo",         ko: "동물원에 갈",        emoji: "🦒", when: ["weekend", "vacation"], mid: { en: "to see pandas", ko: "판다를 보러" } },
+  { id: "amusement", cat: "family", en: "go to an amusement park", ko: "놀이공원에 갈",    emoji: "🎢", when: ["weekend", "vacation"], mid: { en: "with my cousins", ko: "사촌들과 함께" } },
+  { id: "picnic",    cat: "family", en: "have a picnic",         ko: "소풍을 갈",          emoji: "🧺", when: ["weekend"], mid: { en: "at the Han River", ko: "한강으로" } },
+  { id: "fishing",   cat: "family", en: "go fishing",            ko: "낚시하러 갈",        emoji: "🎣", when: ["weekend", "vacation"], mid: { en: "with my grandpa", ko: "할아버지와 함께" } },
+  { id: "aquarium",  cat: "family", en: "go to the aquarium",    ko: "아쿠아리움에 갈",    emoji: "🐠", when: ["weekend", "vacation"], mid: { en: "to see sharks", ko: "상어를 보러" } },
+  { id: "hiking",    cat: "family", en: "go hiking",             ko: "등산하러 갈",        emoji: "🥾", when: ["weekend", "vacation"], mid: { en: "with my parents", ko: "부모님과 함께" } },
+  { id: "museum",    cat: "family", en: "go to a museum",        ko: "박물관에 갈",        emoji: "🏺", when: ["weekend", "vacation"], mid: { en: "with my mom", ko: "엄마와 함께" } },
+  { id: "waterpark", cat: "family", en: "go to a water park",    ko: "워터파크에 갈",      emoji: "💦", when: ["weekend", "vacation"], mid: { en: "with my uncle", ko: "삼촌과 함께" } },
 
   // ✈️ 가족 여행
-  { id: "jeju",      cat: "trip", en: "go to Jeju Island",       ko: "제주도에 갈",        emoji: "🍊", wiki: "Jeju Island",       when: ["weekend", "vacation"], mid: { en: "by plane", ko: "비행기를 타고" } },
-  { id: "busan",     cat: "trip", en: "visit Busan",             ko: "부산에 놀러 갈",     emoji: "🏖️", wiki: "Haeundae Beach",    when: ["weekend", "vacation"], mid: { en: "by KTX", ko: "KTX를 타고" } },
-  { id: "gyeongju",  cat: "trip", en: "go to Gyeongju",          ko: "경주에 갈",          emoji: "🏯", wiki: "Bulguksa",          when: ["weekend", "vacation"], mid: { en: "to see Bulguksa", ko: "불국사를 보러" } },
-  { id: "seoraksan", cat: "trip", en: "climb Seoraksan",         ko: "설악산에 오를",      emoji: "⛰️", wiki: "Seoraksan",         when: ["weekend", "vacation"], mid: { en: "with my dad", ko: "아빠와 함께" } },
-  { id: "jeonju",    cat: "trip", en: "visit Jeonju Hanok Village", ko: "전주 한옥마을에 놀러 갈", emoji: "🏘️", wiki: "Jeonju Hanok Village", when: ["weekend", "vacation"], mid: { en: "with my grandma", ko: "할머니와 함께" } },
-  { id: "seoultower",cat: "trip", en: "go to N Seoul Tower",     ko: "N서울타워에 갈",     emoji: "🗼", wiki: "N Seoul Tower",     when: ["tonight", "weekend", "vacation"], mid: { en: "to see the night view", ko: "야경을 보러" } },
-  { id: "gangneung", cat: "trip", en: "go to Gangneung",         ko: "강릉에 갈",          emoji: "🌊", wiki: "Gangneung",         when: ["weekend", "vacation"], mid: { en: "to see the sunrise", ko: "해돋이를 보러" } },
-  { id: "baseball",  cat: "sports", en: "watch a baseball game", ko: "야구 경기를 볼",  emoji: "⚾", wiki: "Baseball",          when: ["tonight", "weekend"], mid: { en: "at the stadium", ko: "야구장에서" }, book: true },
-  { id: "train",     cat: "trip", en: "take a train trip",       ko: "기차 여행을 할",     emoji: "🚄", wiki: "Korea Train Express", when: ["weekend", "vacation"], mid: { en: "to Yeosu", ko: "여수로" } },
-  { id: "japan",     cat: "trip", en: "travel to Japan",         ko: "일본으로 여행을 갈", emoji: "🗻", wiki: "Mount Fuji",        when: ["vacation"], mid: { en: "with my family", ko: "가족과 함께" } },
-  { id: "australia", cat: "trip", en: "travel to Australia",     ko: "호주로 여행을 갈",   emoji: "🦘", wiki: "Sydney Opera House", when: ["vacation"], mid: { en: "to see kangaroos", ko: "캥거루를 보러" } },
+  { id: "jeju",      cat: "trip", en: "go to Jeju Island",       ko: "제주도에 갈",        emoji: "🍊", when: ["weekend", "vacation"], mid: { en: "by plane", ko: "비행기를 타고" } },
+  { id: "busan",     cat: "trip", en: "visit Busan",             ko: "부산에 놀러 갈",     emoji: "🏖️", when: ["weekend", "vacation"], mid: { en: "by KTX", ko: "KTX를 타고" } },
+  { id: "gyeongju",  cat: "trip", en: "go to Gyeongju",          ko: "경주에 갈",          emoji: "🏯", when: ["weekend", "vacation"], mid: { en: "to see Bulguksa", ko: "불국사를 보러" } },
+  { id: "seoraksan", cat: "trip", en: "climb Seoraksan",         ko: "설악산에 오를",      emoji: "⛰️", when: ["weekend", "vacation"], mid: { en: "with my dad", ko: "아빠와 함께" } },
+  { id: "jeonju",    cat: "trip", en: "visit Jeonju Hanok Village", ko: "전주 한옥마을에 놀러 갈", emoji: "🏘️", when: ["weekend", "vacation"], mid: { en: "with my grandma", ko: "할머니와 함께" } },
+  { id: "seoultower",cat: "trip", en: "go to N Seoul Tower",     ko: "N서울타워에 갈",     emoji: "🗼", when: ["tonight", "weekend", "vacation"], mid: { en: "to see the night view", ko: "야경을 보러" } },
+  { id: "gangneung", cat: "trip", en: "go to Gangneung",         ko: "강릉에 갈",          emoji: "🌊", when: ["weekend", "vacation"], mid: { en: "to see the sunrise", ko: "해돋이를 보러" } },
+  { id: "baseball",  cat: "sports", en: "watch a baseball game", ko: "야구 경기를 볼",  emoji: "⚾", when: ["tonight", "weekend"], mid: { en: "at the stadium", ko: "야구장에서" }, book: true },
+  { id: "train",     cat: "trip", en: "take a train trip",       ko: "기차 여행을 할",     emoji: "🚄", when: ["weekend", "vacation"], mid: { en: "to Yeosu", ko: "여수로" } },
+  { id: "japan",     cat: "trip", en: "travel to Japan",         ko: "일본으로 여행을 갈", emoji: "🗻", when: ["vacation"], mid: { en: "with my family", ko: "가족과 함께" } },
+  { id: "australia", cat: "trip", en: "travel to Australia",     ko: "호주로 여행을 갈",   emoji: "🦘", when: ["vacation"], mid: { en: "to see kangaroos", ko: "캥거루를 보러" } },
 
-  { id: "dishes",    cat: "home", en: "wash the dishes",    ko: "설거지를 할",        emoji: "🍽️", wiki: "Dishwashing",       when: ["tonight", "tomorrow", "weekend"], mid: { en: "after dinner", ko: "저녁을 먹은 후에" } },
-  { id: "music",     cat: "home", en: "listen to music",    ko: "음악을 들을",        emoji: "🎧", wiki: "Headphones",        when: ["afternoon", "tonight", "weekend", "vacation"], mid: { en: "with my sister", ko: "언니(누나)와 함께" } },
-  { id: "tennis",    cat: "sports", en: "play tennis",      ko: "테니스를 칠",        emoji: "🎾", wiki: "Tennis",            when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my mom", ko: "엄마와 함께" } },
-  { id: "dodgeball", cat: "sports", en: "play dodgeball",   ko: "피구를 할",          emoji: "🔴", wiki: "Dodgeball",         when: ["afternoon", "tomorrow"], mid: { en: "with my classmates", ko: "반 친구들과 함께" } },
-  { id: "suncheon",  cat: "trip", en: "go to Suncheon Bay", ko: "순천만에 갈",        emoji: "🌾", wiki: "Suncheon Bay",      when: ["weekend", "vacation"], mid: { en: "to see the reeds", ko: "갈대를 보러" } },
+  { id: "dishes",    cat: "home", en: "wash the dishes",    ko: "설거지를 할",        emoji: "🍽️", when: ["tonight", "tomorrow", "weekend"], mid: { en: "after dinner", ko: "저녁을 먹은 후에" } },
+  { id: "music",     cat: "home", en: "listen to music",    ko: "음악을 들을",        emoji: "🎧", when: ["afternoon", "tonight", "weekend", "vacation"], mid: { en: "with my sister", ko: "언니(누나)와 함께" } },
+  { id: "tennis",    cat: "sports", en: "play tennis",      ko: "테니스를 칠",        emoji: "🎾", when: ["afternoon", "tomorrow", "weekend"], mid: { en: "with my mom", ko: "엄마와 함께" } },
+  { id: "dodgeball", cat: "sports", en: "play dodgeball",   ko: "피구를 할",          emoji: "🔴", when: ["afternoon", "tomorrow"], mid: { en: "with my classmates", ko: "반 친구들과 함께" } },
+  { id: "suncheon",  cat: "trip", en: "go to Suncheon Bay", ko: "순천만에 갈",        emoji: "🌾", when: ["weekend", "vacation"], mid: { en: "to see the reeds", ko: "갈대를 보러" } },
 ];
 
 /* 종류 순서대로 정렬 (🏠 → ⚽ → 📍 → 👨‍👩‍👧 → ✈️), 같은 종류 안에서는 📘 교과서 표현을 먼저 */
