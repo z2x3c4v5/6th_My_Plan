@@ -19,9 +19,9 @@
   </header>
 
   <nav class="tabs">
-    <button class="tab-btn active" data-tab="activity">🎨 활동 카드</button>
-    <button class="tab-btn" data-tab="answer">💬 대답하기</button>
-    <button class="tab-btn" data-tab="practice">🎤 연습하기 <span id="plan-count" class="tab-count">0/5</span></button>
+    <button class="tab-btn active" data-tab="basic">🎨 <span class="tab-long">활동 카드 (초급)</span><span class="tab-short">초급 카드</span></button>
+    <button class="tab-btn" data-tab="mid">🎨 <span class="tab-long">활동 카드 (중급)</span><span class="tab-short">중급 카드</span></button>
+    <button class="tab-btn" data-tab="practice">🎤 연습하기<span id="plan-count" class="tab-count">0/5</span></button>
   </nav>
 
   <div class="toolbar">
@@ -33,123 +33,29 @@
   </div>
 
   <main>
-    <!-- ===== 🎨 활동 카드 (질문 고르기 → 카드 선택 → 연습하기에 반영) ===== -->
-    <section id="tab-activity" class="tab-panel active">
-      <div class="plan-panel">
-        <div class="pp-step">1️⃣ 질문을 골라요</div>
-        <div id="q-tabs" class="q-tabs"></div>
-        <div class="br-dialogue">
-          <div class="br-line line-a">
-            <span class="br-who">🙋 친구</span>
-            <div class="br-bubble">
-              <div class="br-sentence" id="pp-q"></div>
-              <div class="br-ko" id="pp-q-ko"></div>
-            </div>
-            <button class="speak-btn small" id="pp-speak-q" aria-label="질문 듣기">🔊</button>
-          </div>
-          <div class="br-line line-b" id="pp-answer-row">
-            <span class="br-who">🙆 나</span>
-            <div class="br-bubble">
-              <div class="br-sentence">I'm going to <span class="blank" id="pp-act">________</span>.</div>
-              <div class="br-ko" id="pp-act-ko">나는 ________ 거야.</div>
-            </div>
-            <button class="speak-btn small" id="pp-speak-a" aria-label="대답 듣기">🔊</button>
-          </div>
-        </div>
-        <div class="dlg-status" id="pp-status"></div>
-        <div class="fill-actions">
-          <button id="pp-listen" class="btn primary" disabled>🔊 대화 듣기</button>
-          <button id="pp-next" class="btn ghost">다음 질문 ▶</button>
-          <button id="pp-go" class="btn ghost" disabled>🎤 연습하기로 가기</button>
-        </div>
-      </div>
-
-      <div class="section-block">
-        <h2>2️⃣ 할 일 고르기 · I'm going to ___. <span class="count" id="activity-count">0개</span></h2>
-        <p class="hint">카드의 <b>✅ 버튼</b>을 누르면 위 질문의 대답이 되고, <b>🎤 연습하기</b>에 바로 담겨요. 다시 누르면 빠져요. ⭐ = 지금 질문에 잘 어울리는 활동</p>
-        <div class="cat-switch" id="act-cat-switch"></div>
-        <div id="activity-grid" class="card-grid five"></div>
-      </div>
+    <!-- ===== 🎨 활동 카드 (초급) : I'm going to fly a kite. ===== -->
+    <section id="tab-basic" class="tab-panel active">
+      <div id="board-basic"></div>
     </section>
 
-    <!-- ===== 💬 대답하기 (빈칸 + 맞장구) ===== -->
-    <section id="tab-answer" class="tab-panel">
-      <p class="hint" style="margin-bottom:18px">💡 질문을 고르고, 빈칸에 들어갈 <b>할 일</b>을 골라 대화를 완성해요. 친구의 계획을 들으면 <b>Sounds fun!</b> 처럼 맞장구도 쳐 줘요.</p>
-      <div class="section-block">
-        <h2>🧩 빈칸 채워 대화 완성하기</h2>
-        <div class="fill-box">
-          <div class="br-dialogue">
-            <div class="br-line line-a">
-              <span class="br-who">🙋 친구</span>
-              <div class="br-bubble">
-                <div class="br-sentence">What are you going to do <span class="blank" id="ans-time">________</span>?</div>
-                <div class="br-ko" id="ans-time-ko">너는 ________ 무엇을 할 거니?</div>
-              </div>
-              <button class="speak-btn small" id="ans-speak-q" aria-label="질문 듣기">🔊</button>
-            </div>
-            <div class="br-line line-b">
-              <span class="br-who">🙆 나</span>
-              <div class="br-bubble">
-                <div class="br-sentence">I'm going to <span class="blank" id="ans-act">________</span>.</div>
-                <div class="br-ko" id="ans-act-ko">나는 ________ 거야.</div>
-              </div>
-              <button class="speak-btn small" id="ans-speak-a" aria-label="대답 듣기">🔊</button>
-            </div>
-            <div class="br-line line-a">
-              <span class="br-who">🙋 친구</span>
-              <div class="br-bubble">
-                <div class="br-sentence" id="ans-react"><span class="blank">________</span></div>
-                <div class="br-ko" id="ans-react-ko">(맞장구)</div>
-              </div>
-              <button class="speak-btn small" id="ans-speak-r" aria-label="맞장구 듣기">🔊</button>
-            </div>
-          </div>
-          <div class="fill-actions">
-            <button id="ans-listen" class="btn primary" disabled>🔊 대화 듣기</button>
-            <button id="ans-random" class="btn ghost">🎲 무작위로 채우기</button>
-          </div>
-          <div class="chip-group-title">1️⃣ ⏰ 언제? (질문)</div>
-          <div id="ans-time-chips" class="chip-row wrap"></div>
-          <div class="chip-group-title">2️⃣ 🎯 할 일 (I'm going to ___.) <span class="build-sub">⭐ = 그때 하기 좋은 활동</span></div>
-          <div id="ans-act-chips"></div>
-          <div class="chip-group-title">3️⃣ 😆 맞장구</div>
-          <div id="ans-react-chips" class="chip-row wrap"></div>
-        </div>
-      </div>
-      <div class="section-block">
-        <h2>😆 맞장구 표현 <span class="count">5개</span></h2>
-        <p class="hint">친구가 <b>I'm going to ___.</b> 라고 계획을 말하면 이렇게 대답해 줘요.</p>
-        <div id="react-grid" class="card-grid five"></div>
-      </div>
+    <!-- ===== 🎨 활동 카드 (중급) : I'm going to fly a kite on the hill. ===== -->
+    <section id="tab-mid" class="tab-panel">
+      <div id="board-mid"></div>
     </section>
 
-    <!-- ===== 🎤 연습하기 ===== -->
+    <!-- ===== 🎤 연습하기 : 나의 계획표 ===== -->
     <section id="tab-practice" class="tab-panel">
       <div class="section-block">
         <h2>📝 나의 계획표 <span class="count">My Plans</span></h2>
-        <p class="hint"><b>🎨 활동 카드</b>에서 고른 계획이 질문 순서대로 정리돼요. 빈 칸은 <b>🎨 활동 카드</b>에서 질문을 고르고 카드를 선택해 채워요. ✕ 를 누르면 뺄 수 있어요.</p>
+        <p class="hint"><b>🎨 활동 카드</b>에서 고른 대답이 질문 순서대로 정리돼요. 🔊를 눌러 듣고 따라 말해 봐요. 빈 칸은 활동 카드에서 질문을 고르고 카드를 선택해 채우고, ✕ 를 누르면 뺄 수 있어요.</p>
         <div class="plan-name">
           <label>✏️ 내 이름 <input id="my-name" type="text" maxlength="20" placeholder="이름을 써요" /></label>
-          <button id="print-plan" class="btn small primary">🖨️ 인쇄하기</button>
+          <div class="plan-name-btns">
+            <button id="plan-listen-all" class="btn small" disabled>🔊 전체 듣기</button>
+            <button id="print-plan" class="btn small primary">🖨️ 인쇄하기</button>
+          </div>
         </div>
         <div id="plan-summary" class="plan-board"></div>
-      </div>
-      <div class="section-block">
-        <h2>🎤 컴퓨터와 연습하기</h2>
-        <p class="hint">줄마다 <b>🎙️ 말하기</b>로 정확도를 재고, <b>🎭 역할극</b>에서 내가 <b>A(질문하는 사람)</b> 또는 <b>B(대답하는 사람)</b>를 맡으면 컴퓨터가 상대 역할을 읽어 줘요. (Chrome 권장)</p>
-        <p id="practice-empty" class="practice-empty">
-          아직 고른 계획이 없어요! <b>🎨 활동 카드</b>에서 질문을 고르고 카드의 ✅ 버튼을 눌러 보세요.
-        </p>
-        <div id="practice-list" class="practice-list"></div>
-      </div>
-      <div class="section-block">
-        <h2>👫 친구 인터뷰 <span class="count">짝 활동</span></h2>
-        <p class="hint">짝에게 질문 5개를 영어로 물어보고, 친구의 대답을 적어요. 친구가 대답하면 <b>Sounds fun!</b> 처럼 맞장구도 쳐 줘요. 내가 대답할 차례에는 <b>📝 나의 계획표</b>를 보고 말해요.</p>
-        <div class="interview-head">
-          <label>🙆 친구 이름 <input id="friend-name" type="text" maxlength="20" placeholder="친구 이름" /></label>
-          <button id="interview-clear" class="btn small ghost">🧹 새 친구 인터뷰</button>
-        </div>
-        <div id="interview-list" class="interview-list"></div>
       </div>
     </section>
   </main>

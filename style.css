@@ -222,7 +222,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 
 /* 탭의 선택 개수 배지 */
 .tab-count {
-  display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 2px;
+  display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 4px;
   font-size: 0.78rem; border-radius: 999px;
   background: rgba(255, 255, 255, 0.45); color: inherit;
 }
@@ -630,12 +630,14 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 
 .plan-board { background: rgba(255,255,255,0.85); border-radius: 22px; padding: 16px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 10px; }
 .plan-board-head { font-size: 1.3rem; font-weight: 800; text-align: center; color: var(--primary-dark); padding: 4px 0 6px; }
-.plan-row { display: grid; grid-template-columns: 96px 1fr 110px 40px; gap: 12px; align-items: center; border-radius: 16px; padding: 12px 14px; }
+.plan-row { display: grid; grid-template-columns: 116px 1fr 110px 40px; gap: 12px; align-items: center; border-radius: 16px; padding: 12px 14px; }
 .plan-row.tone-0 { background: #ffedd5; } .plan-row.tone-1 { background: #fff7d6; } .plan-row.tone-2 { background: #ffe7e0; }
 .plan-row.tone-3 { background: #e3f6e8; } .plan-row.tone-4 { background: #ede9fe; }
 .plan-row.empty .plan-a, .plan-row.empty .ko { color: var(--muted); font-style: italic; }
 .plan-when { display: flex; flex-direction: column; align-items: center; font-weight: 800; font-size: 0.9rem; color: var(--primary-dark); text-align: center; }
 .plan-when-emoji { font-size: 1.8rem; }
+.plan-when-en { font-size: 0.7rem; font-weight: 700; color: var(--muted); }
+.plan-name-btns { display: flex; gap: 8px; }
 .plan-q { font-size: 1rem; color: var(--muted); font-weight: 700; }
 .plan-a { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 2px; }
 .plan-row .ko { font-size: 0.88rem; color: var(--muted); margin-top: 2px; }
@@ -665,7 +667,6 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
   body.print-plan { background: #fff; }
   body.print-plan .app-header, body.print-plan .tabs, body.print-plan .toolbar,
   body.print-plan .app-footer, body.print-plan .tab-panel:not(#tab-practice),
-  body.print-plan #tab-practice > .section-block:not(:first-child),
   body.print-plan #tab-practice .hint, body.print-plan .plan-name .btn,
   body.print-plan .plan-tools, body.print-plan .word-popup, body.print-plan .toast { display: none !important; }
   body.print-plan #tab-practice { display: block !important; }
@@ -712,7 +713,8 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 .q-num { font-size: 0.75rem; opacity: 0.8; }
 .q-emoji { font-size: 1.5rem; line-height: 1.2; }
 .q-when { font-size: 0.88rem; white-space: nowrap; }
-@media (max-width: 560px) { .q-tabs { gap: 5px; } .q-when { font-size: 0.72rem; } .q-emoji { font-size: 1.2rem; } }
+.q-en { font-size: 0.72rem; font-weight: 700; opacity: 0.8; white-space: nowrap; }
+@media (max-width: 560px) { .q-tabs { gap: 5px; } .q-when { font-size: 0.72rem; } .q-en { font-size: 0.58rem; white-space: normal; text-align: center; line-height: 1.15; } .q-emoji { font-size: 1.2rem; } }
 .plan-panel .br-dialogue { margin-bottom: 12px; }
 .plan-panel .br-sentence .blank {
   display: inline-block; min-width: 100px; padding: 0 6px; border-radius: 10px;
@@ -752,5 +754,9 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 .toast.hidden { display: none; }
 @media (max-width: 560px) {
   .tabs { flex-wrap: nowrap; gap: 6px; padding: 10px 8px; }
-  .tab-btn { min-width: 0; padding: 11px 4px; font-size: 0.88rem; }
+  .tab-btn { min-width: 0; padding: 11px 4px; font-size: 0.88rem; white-space: nowrap; }
+  .tab-long { display: none; }
+  .tab-short { display: inline; }
+  .q-when { font-size: 0.66rem; }
 }
+.tab-short { display: none; }
