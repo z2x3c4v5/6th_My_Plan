@@ -618,7 +618,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 .dlg-status.warn { color: #b45309; border-style: solid; border-color: var(--wish); background: #fffbeb; }
 
 
-.plan-name { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.plan-name { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .plan-name label, .interview-head label { font-weight: 800; color: var(--primary-dark); display: flex; align-items: center; gap: 8px; }
 .plan-name input, .interview-head input, .iv-a input {
   border: 2px solid rgba(234,88,12,0.3); border-radius: 12px; padding: 9px 12px; font-size: 1rem;

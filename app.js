@@ -183,7 +183,6 @@ function setBlank(el, en) {
  * 내 계획 (질문 5개 × 할 일 1개) · 저장
  * =========================================================== */
 let plans = {};          // { afternoon: { id: "kite", level: "basic" }, ... }
-let myName = "";
 
 try {
   const saved = JSON.parse(localStorage.getItem("plan_sets") || "null");
@@ -194,12 +193,11 @@ try {
         plans[k] = typeof v === "string" ? { id: v, level: "basic" } : v;
       });
     }
-    if (saved.name) myName = saved.name;
   }
 } catch (e) {}
 
 function persist() {
-  try { localStorage.setItem("plan_sets", JSON.stringify({ plans, name: myName })); } catch (e) {}
+  try { localStorage.setItem("plan_sets", JSON.stringify({ plans })); } catch (e) {}
 }
 const planOf = key => {
   const p = plans[key];
@@ -412,7 +410,7 @@ function renderPlanSummary() {
   box.innerHTML = "";
   const head = document.createElement("div");
   head.className = "plan-board-head";
-  head.textContent = `📅 ${myName ? myName + "의" : "나의"} 계획표 · My Plans`;
+  head.textContent = "📅 나의 계획표 · My Plans";
   box.appendChild(head);
   TIMES.forEach((t, i) => {
     const p = planOf(t.key);
@@ -457,9 +455,6 @@ document.getElementById("plan-listen-all").addEventListener("click", () => {
     .map(([t, p]) => `${questionEn(t)} ${answerEn(p.act, p.level)}`);
   if (lines.length) speak(lines.join(" "));
 });
-const nameInput = document.getElementById("my-name");
-nameInput.value = myName;
-nameInput.addEventListener("input", () => { myName = nameInput.value.trim(); persist(); renderPlanSummary(); });
 document.getElementById("print-plan").addEventListener("click", () => {
   document.body.classList.add("print-plan");
   window.print();
