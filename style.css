@@ -666,7 +666,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
   body.print-plan .app-header, body.print-plan .tabs, body.print-plan .toolbar,
   body.print-plan .app-footer, body.print-plan .tab-panel:not(#tab-practice),
   body.print-plan #tab-practice .hint, body.print-plan .plan-name .btn,
-  body.print-plan .plan-tools, body.print-plan .word-popup, body.print-plan .toast { display: none !important; }
+  body.print-plan .plan-tools, body.print-plan .plan-mic, body.print-plan .word-popup, body.print-plan .toast { display: none !important; }
   body.print-plan #tab-practice { display: block !important; }
   body.print-plan .plan-board { box-shadow: none; border: 2px solid #9a3412; }
   body.print-plan .word { border-bottom: none; }
@@ -760,3 +760,15 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 
 /* 📘 교과서 표현 카드 */
 .card.textbook .card-tag { background: linear-gradient(135deg, #2563eb, #1e40af); }
+
+/* 🎙️ 계획표 말하기 · 녹음 */
+.plan-mic { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.plan-mic .mic-btn {
+  width: auto; height: 38px; border-radius: 999px; padding: 0 14px; gap: 6px; font-size: 1rem;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+}
+.plan-mic .mic-txt { font-size: 0.88rem; font-weight: 800; }
+.plan-mic .play-btn { padding: 8px 12px; font-size: 0.85rem; }
+.plan-mic .pstats { margin: 0; padding: 5px 10px; font-size: 0.82rem; white-space: nowrap; }
+.plan-mic .mic-feedback { flex-basis: 100%; text-align: left; margin: 0; min-height: 0; font-size: 0.88rem; }
+.plan-mic .mic-feedback:empty { display: none; }

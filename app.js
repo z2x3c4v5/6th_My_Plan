@@ -4,7 +4,7 @@
  * - 단어 클릭: 단어 발음 + 뜻 풍선(popup)
  * - 그림: Canva로 만든 활동 그림 images/활동id.png (없으면 이모지)
  * - 활동 카드(초급 · 중급): 질문 5개 중 하나를 고르고 카드의 [선택] → 말풍선 대화와 연습하기에 바로 반영
- * - 연습하기: 나의 계획표 (My Plans) · 인쇄
+ * - 연습하기: 나의 계획표 (My Plans) · 🎙️ 말하기(정확도 측정 + 녹음해서 다시 듣기) · 인쇄
  * ========================================================= */
 
 /* ---------- 음성 합성 (TTS) ---------- */
@@ -403,6 +403,161 @@ const boards = {
 };
 
 /* ===========================================================
+ * 🎙️ 말하기 연습 (음성 인식으로 정확도 측정 + 내 목소리 녹음)
+ * - 음성 인식: Web Speech API (Chrome 권장)
+ * - 녹음: MediaRecorder → ▶ 내 목소리로 다시 듣기 (새로고침하면 녹음은 사라져요)
+ * =========================================================== */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const srSupported = !!SR;
+const recSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+let stats = {};          // 문장별 { attempts, best }
+try { stats = JSON.parse(localStorage.getItem("plan_stats") || "{}") || {}; } catch (e) {}
+function saveStats() { try { localStorage.setItem("plan_stats", JSON.stringify(stats)); } catch (e) {} }
+const voiceClips = {};   // 문장 → 내 목소리 녹음 주소
+let micBusy = false;
+
+function normalize(s) {
+  return s.toLowerCase().replace(/[^a-z\s']/g, "").replace(/\s+/g, " ").trim();
+}
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n];
+}
+function wordsClose(a, b) {
+  if (a === b) return true;
+  if (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a))) return true;
+  return Math.abs(a.length - b.length) <= 1 && levenshtein(a, b) <= 1;
+}
+const STOPWORDS = new Set(["a", "an", "the", "to", "of", "on", "in", "at", "for", "by", "i", "i'm", "going", "my"]);
+function scoreMatch(target, heard) {
+  const t = normalize(target).split(" ").filter(Boolean);
+  const h = normalize(heard).split(" ").filter(Boolean);
+  let content = t.filter(w => !STOPWORDS.has(w));
+  if (!content.length) content = t;
+  let hit = 0;
+  content.forEach(w => { if (h.some(x => wordsClose(x, w))) hit++; });
+  let score = hit / content.length;
+  if (score >= 0.5) score = Math.min(1, score + 0.12);
+  return score;
+}
+
+/* 마이크 녹음 시작 → stop() 하면 녹음 파일(Blob)을 돌려줘요 */
+function startRecorder() {
+  if (!recSupported) return Promise.resolve(null);
+  return navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    const chunks = [];
+    const mr = new MediaRecorder(stream);
+    mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    const done = new Promise(res => {
+      mr.onstop = () => {
+        stream.getTracks().forEach(tr => tr.stop());
+        res(chunks.length ? new Blob(chunks, { type: mr.mimeType || "audio/webm" }) : null);
+      };
+    });
+    mr.start();
+    return { stop() { if (mr.state !== "inactive") mr.stop(); return done; } };
+  }).catch(() => null);
+}
+
+/* 한 번 말하기: 녹음 + 음성 인식 → done(점수, 들린 말, 오류, 녹음) */
+function listenAndScore(target, done) {
+  micBusy = true;
+  synth.cancel();
+  startRecorder().then(recorder => {
+    let score = 0, heard = "", err = null, finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      (recorder ? recorder.stop() : Promise.resolve(null)).then(blob => {
+        micBusy = false;
+        done(Math.round(score * 100), heard, err, blob);
+      });
+    };
+    if (!srSupported) { setTimeout(finish, 4000); return; }   // 음성 인식이 없으면 4초 동안 녹음만
+    const rec = new SR();
+    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 5;
+    rec.onresult = e => {
+      const alts = e.results[0];
+      for (let i = 0; i < alts.length; i++) {
+        const sc = scoreMatch(target, alts[i].transcript);
+        if (sc > score) { score = sc; heard = alts[i].transcript; }
+      }
+    };
+    rec.onerror = e => { err = e.error; };
+    rec.onend = finish;
+    try { rec.start(); } catch (e) { err = "start"; finish(); }
+  });
+}
+
+function statsText(en, last) {
+  const st = stats[en] || { attempts: 0, best: 0 };
+  return `정확도 <b class="acc">${last != null ? last + "%" : "--"}</b>` +
+    ` · 최고 <b class="best">${st.best ? st.best + "%" : "--"}</b>` +
+    ` · <b>${st.attempts}</b>회`;
+}
+
+/* 계획표 한 줄의 말하기 도구: [🎙️ 말하기] [▶ 내 목소리] 정확도 · 최고 · 횟수 */
+function makeMicTools(en) {
+  const wrap = document.createElement("div");
+  wrap.className = "plan-mic";
+  const mic = document.createElement("button");
+  mic.className = "mic-btn";
+  mic.innerHTML = '<span class="mic-ico">🎙️</span><span class="mic-txt">말하기</span>';
+  const play = document.createElement("button");
+  play.className = "btn small play-btn";
+  play.textContent = "▶ 내 목소리";
+  play.disabled = !voiceClips[en];
+  play.addEventListener("click", () => { synth.cancel(); new Audio(voiceClips[en]).play(); });
+  const st = document.createElement("div");
+  st.className = "pstats";
+  st.innerHTML = statsText(en, null);
+  const fb = document.createElement("div");
+  fb.className = "mic-feedback";
+  if (!srSupported && !recSupported) {
+    mic.disabled = true;
+    mic.title = "이 브라우저는 마이크 기능을 지원하지 않아요 (Chrome 권장)";
+  }
+  mic.addEventListener("click", () => {
+    if (micBusy) return;
+    mic.classList.add("recording");
+    fb.className = "mic-feedback";
+    fb.textContent = srSupported ? "🔴 듣고 있어요... 또박또박 말해 보세요!" : "🔴 녹음 중이에요 (4초)...";
+    listenAndScore(en, (score, heard, err, blob) => {
+      mic.classList.remove("recording");
+      if (blob) {
+        if (voiceClips[en]) URL.revokeObjectURL(voiceClips[en]);
+        voiceClips[en] = URL.createObjectURL(blob);
+        play.disabled = false;
+      }
+      if (!srSupported) {
+        fb.className = "mic-feedback good";
+        fb.textContent = blob ? "🎧 녹음 완료! ▶ 내 목소리로 들어 보세요. (정확도는 Chrome에서 볼 수 있어요)" : "마이크 권한을 허용해 주세요.";
+        return;
+      }
+      if (err && score === 0) {
+        fb.className = "mic-feedback bad";
+        fb.textContent = err === "not-allowed" ? "마이크 권한을 허용해 주세요."
+          : err === "no-speech" ? "소리가 안 들렸어요. 다시 말해 보세요." : "다시 시도해 주세요.";
+        return;
+      }
+      const rec = stats[en] || { attempts: 0, best: 0 };
+      rec.attempts++; rec.best = Math.max(rec.best, score); stats[en] = rec; saveStats();
+      st.innerHTML = statsText(en, score);
+      const h = `<span class="heard">내 발음: ${heard || "(못 들었어요)"}</span>`;
+      fb.className = "mic-feedback " + (score >= 45 ? "good" : "bad");
+      fb.innerHTML = (score >= 75 ? `⭐ 훌륭해요! ${score}% ` : score >= 45 ? `👍 좋아요! 한 번 더! ${score}% ` : `🔁 다시 또박또박! ${score}% `) + h;
+    });
+  });
+  wrap.append(mic, play, st, fb);
+  return wrap;
+}
+
+/* ===========================================================
  * 📝 나의 계획표 (연습하기 탭)
  * =========================================================== */
 function renderPlanSummary() {
@@ -428,6 +583,7 @@ function renderPlanSummary() {
     const ko = document.createElement("div"); ko.className = "ko";
     ko.textContent = p ? answerKo(p.act, p.level) : "🎨 활동 카드에서 골라요";
     body.append(qEl, aEl, ko);
+    if (p) body.appendChild(makeMicTools(answerEn(p.act, p.level)));
     let visual;
     if (p) visual = makeVisual(p.act, "plan-thumb");
     else { visual = document.createElement("div"); visual.className = "plan-emoji"; visual.textContent = "❔"; }
