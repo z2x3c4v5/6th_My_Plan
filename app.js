@@ -404,7 +404,7 @@ const boards = {
 
 /* ===========================================================
  * 🎙️ 말하기 연습 (음성 인식으로 정확도 측정 + 내 목소리 녹음)
- * - 음성 인식: Web Speech API (Chrome 권장)
+ * - 음성 인식: Web Speech API (Chrome 권장) + 순서 맞춤·부분 점수·단어별 색깔 피드백
  * - 녹음: MediaRecorder → ▶ 내 목소리로 다시 듣기 (새로고침하면 녹음은 사라져요)
  * =========================================================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -416,8 +416,44 @@ function saveStats() { try { localStorage.setItem("plan_stats", JSON.stringify(s
 const voiceClips = {};   // 문장 → 내 목소리 녹음 주소
 let micBusy = false;
 
-function normalize(s) {
-  return s.toLowerCase().replace(/[^a-z\s']/g, "").replace(/\s+/g, " ").trim();
+/* ---------- 정교한 발음 채점 ----------
+ * 1) 줄임말 펼치기(I'm → i am)·숫자/동음어 정리 후 단어로 나눔
+ * 2) 목표 문장과 들린 말을 "순서대로" 맞춰 봄 (동적 계획법 정렬)
+ * 3) 단어마다 부분 점수: 같음 1 · 철자 한 글자 차이 0.85 · 소리가 비슷함 0.7 · 비슷한 편 0.5
+ *    (한국 학생이 헷갈리는 r/l · f/p · v/b · th/s 는 비슷한 소리로 봐 줌)
+ * 4) 가중치: 핵심 단어 1 (going 포함) · 작은 단어(a, the, to …) 0.3 · 지명(Jeju 등) 0.6
+ * 5) 덧붙인 말이 많으면 조금 감점 (최대 10%)
+ */
+const CONTRACTIONS = { "i'm": "i am", "i'll": "i will", "let's": "let us", "you're": "you are", "it's": "it is",
+  "don't": "do not", "can't": "can not", "what's": "what is" };
+const SAME_SOUND = { too: "to", two: "to", four: "for", "2": "to", "4": "for", uh: "a", ah: "a", an: "a" };
+const FUNCTION_WORDS = new Set(["a", "an", "the", "to", "of", "on", "in", "at", "for", "by", "my", "i", "am", "with", "and"]);
+
+function tokenize(text) {
+  const words = text.toLowerCase().replace(/[’`]/g, "'")
+    .replace(/[^a-z0-9\s']/g, " ").split(/\s+/).filter(Boolean)
+    .flatMap(w => (CONTRACTIONS[w] || w).split(" "))
+    .map(w => SAME_SOUND[w] || w.replace(/'/g, ""));
+  // "p c" 처럼 한 글자씩 들린 말은 붙여요 (a, i 는 그대로)
+  const out = [];
+  words.forEach(w => {
+    const last = out[out.length - 1];
+    if (/^[b-hj-z]$/.test(w) && last && /^[b-hj-z]+$/.test(last) && last.length < 4) out[out.length - 1] = last + w;
+    else out.push(w);
+  });
+  return out;
+}
+/* 목표 문장 단어 + 가중치 (원래 대문자인 지명은 0.6) */
+function targetWords(sentence) {
+  const out = [];
+  sentence.split(/\s+/).forEach((orig, gi) => {
+    const isProper = gi > 0 && /^[A-Z][a-z]/.test(orig);
+    tokenize(orig).forEach(w => out.push({
+      w, group: gi, disp: orig.replace(/[.,!?]+$/, ""),
+      weight: isProper ? 0.6 : FUNCTION_WORDS.has(w) ? 0.3 : 1,
+    }));
+  });
+  return out;
 }
 function levenshtein(a, b) {
   const m = a.length, n = b.length;
@@ -428,22 +464,49 @@ function levenshtein(a, b) {
       d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
   return d[m][n];
 }
-function wordsClose(a, b) {
-  if (a === b) return true;
-  if (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a))) return true;
-  return Math.abs(a.length - b.length) <= 1 && levenshtein(a, b) <= 1;
+/* 소리 열쇠: 비슷하게 들리는 자음 철자를 한 가지로 모아요 (모음은 그대로 → kite ≠ cat) */
+function soundKey(w) {
+  const k = w.replace(/ph/g, "f").replace(/th/g, "s").replace(/ck/g, "k").replace(/c(?=[eiy])/g, "s").replace(/c/g, "k")
+    .replace(/q/g, "k").replace(/x/g, "ks").replace(/z/g, "s").replace(/v/g, "b").replace(/f/g, "p")
+    .replace(/r/g, "l").replace(/wh/g, "w").replace(/gh/g, "");
+  return k.replace(/(.)\1+/g, "$1");
 }
-const STOPWORDS = new Set(["a", "an", "the", "to", "of", "on", "in", "at", "for", "by", "i", "i'm", "going", "my"]);
-function scoreMatch(target, heard) {
-  const t = normalize(target).split(" ").filter(Boolean);
-  const h = normalize(heard).split(" ").filter(Boolean);
-  let content = t.filter(w => !STOPWORDS.has(w));
-  if (!content.length) content = t;
-  let hit = 0;
-  content.forEach(w => { if (h.some(x => wordsClose(x, w))) hit++; });
-  let score = hit / content.length;
-  if (score >= 0.5) score = Math.min(1, score + 0.12);
-  return score;
+function wordSim(t, h) {
+  if (t === h) return 1;
+  const dist = levenshtein(t, h), len = Math.max(t.length, h.length);
+  if (dist === 1 && len >= 3) return 0.85;
+  if (soundKey(t) === soundKey(h)) return 0.7;
+  if (len >= 4 && 1 - dist / len >= 0.6) return 0.5;
+  return 0;
+}
+/* 순서대로 맞춰 보고 점수(0~100)와 단어별 결과를 돌려줘요 */
+function scoreDetailed(sentence, heardText) {
+  const T = targetWords(sentence), H = tokenize(heardText);
+  const n = T.length, m = H.length;
+  const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++)
+    for (let j = 1; j <= m; j++)
+      dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1] + wordSim(T[i - 1].w, H[j - 1]) * T[i - 1].weight);
+  const sims = Array(n).fill(0);
+  let used = 0;
+  for (let i = n, j = m; i > 0 && j > 0;) {
+    const sim = wordSim(T[i - 1].w, H[j - 1]);
+    if (sim > 0 && Math.abs(dp[i][j] - (dp[i - 1][j - 1] + sim * T[i - 1].weight)) < 1e-9) { sims[i - 1] = sim; used++; i--; j--; }
+    else if (dp[i - 1][j] >= dp[i][j - 1]) i--;
+    else j--;
+  }
+  const totalW = T.reduce((a, x) => a + x.weight, 0);
+  const extra = Math.max(0, m - used);
+  const raw = totalW ? dp[n][m] / totalW : 0;
+  const score = Math.max(0, Math.round((raw - Math.min(0.1, extra * 0.03)) * 100));
+  // 원래 문장 단어 단위로 묶어요 (I'm = i + am → 둘 중 낮은 점수)
+  const words = [];
+  T.forEach((x, i) => {
+    const last = words[words.length - 1];
+    if (last && last.group === x.group) last.sim = Math.min(last.sim, sims[i]);
+    else words.push({ w: x.disp, key: x.w, group: x.group, sim: sims[i] });
+  });
+  return { score, words };
 }
 
 /* 마이크 녹음 시작 → stop() 하면 녹음 파일(Blob)을 돌려줘요 */
@@ -465,28 +528,39 @@ function startRecorder() {
 }
 
 /* 한 번 말하기: 녹음 + 음성 인식 → done(점수, 들린 말, 오류, 녹음) */
-function listenAndScore(target, done) {
+function listenAndScore(target, done, onInterim) {
   micBusy = true;
   synth.cancel();
   startRecorder().then(recorder => {
-    let score = 0, heard = "", err = null, finished = false;
+    let best = { score: 0, words: [] }, heard = "", err = null, finished = false;
+    const finals = [];   // 확정된 결과마다 후보 문장들
     const finish = () => {
       if (finished) return;
       finished = true;
+      clearTimeout(limit);
+      // 후보 문장(최대 5개) 중 가장 잘 맞는 것으로 채점
+      const cands = finals.length === 1 ? finals[0]
+        : finals.length ? [finals.map(f => f[0]).join(" ")] : [];
+      cands.forEach(c => { const r = scoreDetailed(target, c); if (r.score > best.score || !heard) { best = r; heard = c; } });
       (recorder ? recorder.stop() : Promise.resolve(null)).then(blob => {
         micBusy = false;
-        done(Math.round(score * 100), heard, err, blob);
+        done(best.score, heard, err, blob, best.words);
       });
     };
-    if (!srSupported) { setTimeout(finish, 4000); return; }   // 음성 인식이 없으면 4초 동안 녹음만
-    const rec = new SR();
-    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 5;
+    let rec = null;
+    // 너무 오래 말하지 않으면 끝내요 (음성 인식이 없으면 4초 동안 녹음만)
+    const limit = setTimeout(() => { if (rec) { try { rec.stop(); } catch (e) { finish(); } } else finish(); }, srSupported ? 9000 : 4000);
+    if (!srSupported) return;
+    rec = new SR();
+    rec.lang = "en-US"; rec.interimResults = true; rec.maxAlternatives = 5; rec.continuous = false;
     rec.onresult = e => {
-      const alts = e.results[0];
-      for (let i = 0; i < alts.length; i++) {
-        const sc = scoreMatch(target, alts[i].transcript);
-        if (sc > score) { score = sc; heard = alts[i].transcript; }
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finals.push(Array.from(r, alt => alt.transcript));
+        else interim += r[0].transcript;
       }
+      if (onInterim) onInterim(finals.map(f => f[0]).join(" ") + " " + interim);
     };
     rec.onerror = e => { err = e.error; };
     rec.onend = finish;
@@ -533,6 +607,41 @@ document.getElementById("stats-reset").addEventListener("click", () => {
   stats = {}; saveStats(); renderPlanSummary();
 });
 
+/* 채점 결과 보여 주기: 점수 + 단어별 색깔(초록 맞음 · 노랑 비슷함 · 빨강 놓침) + 다시 연습할 단어 */
+function showFeedback(fb, score, heard, words) {
+  fb.innerHTML = "";
+  fb.className = "mic-feedback " + (score >= 60 ? "good" : "bad");
+  const head = document.createElement("div");
+  head.className = "fb-head";
+  head.textContent = score >= 85 ? `⭐ 훌륭해요! ${score}%` : score >= 60 ? `👍 좋아요! 한 번 더! ${score}%` : `🔁 다시 또박또박! ${score}%`;
+  const line = document.createElement("div");
+  line.className = "fb-words";
+  words.forEach(x => {
+    const sp = document.createElement("span");
+    sp.className = "fw " + (x.sim >= 0.95 ? "ok" : x.sim >= 0.5 ? "close" : "miss");
+    sp.textContent = x.w;
+    line.appendChild(sp);
+  });
+  const missed = [...new Set(words.filter(x => x.sim < 0.95 && !FUNCTION_WORDS.has(x.key)).map(x => x.w))];
+  fb.append(head, line);
+  if (missed.length) {
+    const tip = document.createElement("div");
+    tip.className = "fb-tip";
+    tip.append("🔁 다시 들어 볼 단어: ");
+    missed.forEach(w => {
+      const b = document.createElement("button");
+      b.className = "fb-word-btn"; b.textContent = "🔊 " + w;
+      b.addEventListener("click", () => speak(w, 0.75));
+      tip.appendChild(b);
+    });
+    fb.appendChild(tip);
+  }
+  const h = document.createElement("div");
+  h.className = "heard";
+  h.textContent = "컴퓨터가 들은 말: " + (heard || "(못 들었어요)");
+  fb.appendChild(h);
+}
+
 /* 계획표 한 줄의 말하기 도구: [🎙️ 말하기] [▶ 내 목소리] 정확도 · 최고 · 횟수 */
 function makeMicTools(en) {
   const wrap = document.createElement("div");
@@ -559,7 +668,7 @@ function makeMicTools(en) {
     mic.classList.add("recording");
     fb.className = "mic-feedback";
     fb.textContent = srSupported ? "🔴 듣고 있어요... 또박또박 말해 보세요!" : "🔴 녹음 중이에요 (4초)...";
-    listenAndScore(en, (score, heard, err, blob) => {
+    listenAndScore(en, (score, heard, err, blob, words) => {
       mic.classList.remove("recording");
       if (blob) {
         if (voiceClips[en]) URL.revokeObjectURL(voiceClips[en]);
@@ -581,9 +690,10 @@ function makeMicTools(en) {
       rec.attempts++; rec.total += score; rec.best = Math.max(rec.best, score); stats[en] = rec; saveStats();
       renderPracticeSummary();
       st.innerHTML = statsText(en, score);
-      const h = `<span class="heard">내 발음: ${heard || "(못 들었어요)"}</span>`;
-      fb.className = "mic-feedback " + (score >= 45 ? "good" : "bad");
-      fb.innerHTML = (score >= 75 ? `⭐ 훌륭해요! ${score}% ` : score >= 45 ? `👍 좋아요! 한 번 더! ${score}% ` : `🔁 다시 또박또박! ${score}% `) + h;
+      showFeedback(fb, score, heard, words);
+    }, live => {
+      fb.className = "mic-feedback";
+      fb.textContent = "🔴 듣고 있어요... 👂 " + live.trim();
     });
   });
   wrap.append(mic, play, st, fb);
