@@ -494,12 +494,44 @@ function listenAndScore(target, done) {
   });
 }
 
+/* 문장별 기록: { attempts: 횟수, best: 최고, total: 정확도 합계 } → 평균 = total / attempts */
+const statOf = en => {
+  const st = stats[en] || { attempts: 0, best: 0, total: 0 };
+  if (st.total == null) st.total = st.best * st.attempts;   // 예전 기록(합계 없음)은 최고 점수로 대신해요
+  return st;
+};
+const avgOf = st => st.attempts ? Math.round(st.total / st.attempts) : null;
+
 function statsText(en, last) {
-  const st = stats[en] || { attempts: 0, best: 0 };
-  return `정확도 <b class="acc">${last != null ? last + "%" : "--"}</b>` +
+  const st = statOf(en), avg = avgOf(st);
+  return `이번 <b class="acc">${last != null ? last + "%" : "--"}</b>` +
+    ` · 평균 <b class="avg">${avg != null ? avg + "%" : "--"}</b>` +
     ` · 최고 <b class="best">${st.best ? st.best + "%" : "--"}</b>` +
     ` · <b>${st.attempts}</b>회`;
 }
+
+/* 🎙️ 연습 기록 요약: 지금 계획표 문장들의 총 연습 횟수 · 평균 정확도 · 연습한 문장 수 */
+function renderPracticeSummary() {
+  const box = document.getElementById("practice-summary");
+  if (!box) return;
+  const sentences = TIMES.map(t => planOf(t.key)).filter(Boolean).map(p => answerEn(p.act, p.level));
+  let attempts = 0, total = 0, done = 0;
+  sentences.forEach(en => {
+    const st = statOf(en);
+    attempts += st.attempts; total += st.total;
+    if (st.attempts) done++;
+  });
+  const avg = attempts ? Math.round(total / attempts) : null;
+  box.innerHTML =
+    `<div class="ps-item"><span class="ps-label">🎙️ 총 연습</span><b class="ps-val">${attempts}회</b></div>` +
+    `<div class="ps-item"><span class="ps-label">📊 평균 정확도</span><b class="ps-val">${avg != null ? avg + "%" : "--"}</b></div>` +
+    `<div class="ps-item"><span class="ps-label">✅ 연습한 문장</span><b class="ps-val">${done} / ${sentences.length}</b></div>`;
+  document.getElementById("stats-reset").disabled = attempts === 0;
+}
+document.getElementById("stats-reset").addEventListener("click", () => {
+  if (!confirm("연습 기록(횟수 · 평균 · 최고 정확도)을 모두 지울까요?")) return;
+  stats = {}; saveStats(); renderPlanSummary();
+});
 
 /* 계획표 한 줄의 말하기 도구: [🎙️ 말하기] [▶ 내 목소리] 정확도 · 최고 · 횟수 */
 function makeMicTools(en) {
@@ -545,8 +577,9 @@ function makeMicTools(en) {
           : err === "no-speech" ? "소리가 안 들렸어요. 다시 말해 보세요." : "다시 시도해 주세요.";
         return;
       }
-      const rec = stats[en] || { attempts: 0, best: 0 };
-      rec.attempts++; rec.best = Math.max(rec.best, score); stats[en] = rec; saveStats();
+      const rec = statOf(en);
+      rec.attempts++; rec.total += score; rec.best = Math.max(rec.best, score); stats[en] = rec; saveStats();
+      renderPracticeSummary();
       st.innerHTML = statsText(en, score);
       const h = `<span class="heard">내 발음: ${heard || "(못 들었어요)"}</span>`;
       fb.className = "mic-feedback " + (score >= 45 ? "good" : "bad");
@@ -605,6 +638,7 @@ function renderPlanSummary() {
   });
   const all = document.getElementById("plan-listen-all");
   all.disabled = doneCount() === 0;
+  renderPracticeSummary();
 }
 document.getElementById("plan-listen-all").addEventListener("click", () => {
   const lines = TIMES.map(t => [t, planOf(t.key)]).filter(([, p]) => p)

@@ -618,7 +618,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 .dlg-status.warn { color: #b45309; border-style: solid; border-color: var(--wish); background: #fffbeb; }
 
 
-.plan-name { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.plan-name { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .plan-name label, .interview-head label { font-weight: 800; color: var(--primary-dark); display: flex; align-items: center; gap: 8px; }
 .plan-name input, .interview-head input, .iv-a input {
   border: 2px solid rgba(234,88,12,0.3); border-radius: 12px; padding: 9px 12px; font-size: 1rem;
@@ -772,3 +772,14 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
 .plan-mic .pstats { margin: 0; padding: 5px 10px; font-size: 0.82rem; white-space: nowrap; }
 .plan-mic .mic-feedback { flex-basis: 100%; text-align: left; margin: 0; min-height: 0; font-size: 0.88rem; }
 .plan-mic .mic-feedback:empty { display: none; }
+
+/* 🎙️ 연습 기록 요약 */
+.practice-summary { display: flex; gap: 8px; flex-wrap: wrap; }
+.ps-item {
+  display: flex; flex-direction: column; align-items: center; min-width: 96px;
+  background: rgba(255,255,255,0.9); border: 1.5px solid rgba(234, 88, 12, 0.25);
+  border-radius: 14px; padding: 6px 12px; box-shadow: var(--shadow-sm);
+}
+.ps-label { font-size: 0.75rem; font-weight: 800; color: var(--muted); }
+.ps-val { font-size: 1.15rem; color: var(--primary-dark); }
+.pstats .avg { color: #2563eb; }

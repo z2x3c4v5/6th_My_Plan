@@ -46,9 +46,11 @@
     <section id="tab-practice" class="tab-panel">
       <div class="section-block">
         <h2>📝 나의 계획표 <span class="count">My Plans</span></h2>
-        <p class="hint"><b>🎨 활동 카드</b>에서 고른 대답이 질문 순서대로 정리돼요. 🔊를 눌러 듣고, <b>🎙️ 말하기</b>로 내 대답을 말하면 <b>정확도(%)</b>를 알려 주고 녹음돼요. <b>▶ 내 목소리</b>로 다시 들으며 정확도를 높여 봐요. (Chrome 권장) 빈 칸은 활동 카드에서 질문을 고르고 카드를 선택해 채우고, ✕ 를 누르면 뺄 수 있어요.</p>
+        <p class="hint"><b>🎨 활동 카드</b>에서 고른 대답이 질문 순서대로 정리돼요. 🔊를 눌러 듣고, <b>🎙️ 말하기</b>로 내 대답을 말하면 <b>정확도(%)</b>를 알려 주고 녹음돼요. 위에서 <b>총 연습 횟수</b>와 <b>평균 정확도</b>를 확인할 수 있어요. <b>▶ 내 목소리</b>로 다시 들으며 정확도를 높여 봐요. (Chrome 권장) 빈 칸은 활동 카드에서 질문을 고르고 카드를 선택해 채우고, ✕ 를 누르면 뺄 수 있어요.</p>
         <div class="plan-name">
+          <div id="practice-summary" class="practice-summary"></div>
           <div class="plan-name-btns">
+            <button id="stats-reset" class="btn small ghost" disabled>🧹 기록 지우기</button>
             <button id="plan-listen-all" class="btn small" disabled>🔊 전체 듣기</button>
             <button id="print-plan" class="btn small primary">🖨️ 인쇄하기</button>
           </div>
