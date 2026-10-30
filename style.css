@@ -760,3 +760,6 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px 50px; }
   .q-when { font-size: 0.66rem; }
 }
 .tab-short { display: none; }
+
+/* 📘 교과서 표현 카드 */
+.card.textbook .card-tag { background: linear-gradient(135deg, #2563eb, #1e40af); }

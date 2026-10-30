@@ -306,7 +306,7 @@ function createBoard(root, level) {
       <p class="hint">${level === "mid"
         ? "중급은 <b>누구와 · 어디서 · 무엇을 보러</b>를 붙여 조금 더 길게 말해요. (예: I'm going to fly a kite <b>on the hill</b>.)"
         : "카드를 보고 <b>I'm going to + 할 일.</b> 로 말해요."}
-        카드의 <b>✅ 버튼</b>을 누르면 위 질문의 대답이 되고 <b>🎤 연습하기</b>에 바로 담겨요. 다시 누르면 빠져요. ⭐ = 지금 질문에 잘 어울리는 활동</p>
+        <b>📘</b> 표시는 교과서 표현이에요. 카드의 <b>✅ 버튼</b>을 누르면 위 질문의 대답이 되고 <b>🎤 연습하기</b>에 바로 담겨요. 다시 누르면 빠져요. ⭐ = 지금 질문에 잘 어울리는 활동</p>
       <div class="cat-switch"></div>
       <div class="card-grid five act-grid"></div>
     </div>`;
@@ -316,7 +316,7 @@ function createBoard(root, level) {
   function renderFilters() {
     const wrap = $(".cat-switch");
     wrap.innerHTML = "";
-    [{ key: "all", label: "전체" }, ...ACT_CATS].forEach(c => {
+    [{ key: "all", label: "전체" }, { key: "book", label: "📘 교과서 표현" }, ...ACT_CATS].forEach(c => {
       const b = document.createElement("button");
       b.className = "cat-btn" + (actCat === c.key ? " active" : "");
       b.textContent = c.label;
@@ -401,7 +401,7 @@ function createBoard(root, level) {
       const btn = c.querySelector(".pick-btn");
       btn.classList.toggle("on", on);
       btn.textContent = on ? `✓ ${t.short} 대답으로 선택됨` : `✅ ${t.short}에 할래요`;
-      c.querySelector(".card-tag").textContent = catLabel(a.cat) + (a.when.includes(t.key) ? " · ⭐" : "");
+      c.querySelector(".card-tag").textContent = (a.book ? "📘 교과서 · " : "") + catLabel(a.cat) + (a.when.includes(t.key) ? " · ⭐" : "");
     });
   }
 
@@ -409,7 +409,7 @@ function createBoard(root, level) {
     grid.innerHTML = "";
     const t = TIMES[curTime];
     const list = ACTIVITIES.filter(a =>
-      (actCat === "all" || a.cat === actCat) && (!recOnly || a.when.includes(t.key)));
+      (actCat === "all" || (actCat === "book" ? a.book : a.cat === actCat)) && (!recOnly || a.when.includes(t.key)));
     list.forEach((a, i) => {
       const btn = document.createElement("button");
       btn.className = "pick-btn";
@@ -419,6 +419,7 @@ function createBoard(root, level) {
         { tone: i % 6, tag: catLabel(a.cat), extra: btn }
       );
       card.dataset.act = a.id;
+      if (a.book) card.classList.add("textbook");
       grid.appendChild(card);
     });
     $(".act-count").textContent = `${list.length}개`;
