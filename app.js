@@ -3,9 +3,8 @@
  * - 음성 출력: Web Speech API (SpeechSynthesis)
  * - 단어 클릭: 단어 발음 + 뜻 풍선(popup)
  * - 실제 사진: 위키백과 대표 사진 (못 불러오면 이모지)
- * - 내 계획표: 질문 5개(오후·밤·내일·주말·겨울방학)마다 할 일 1개
- * - 연습: 친구 인터뷰 기록 + 줄마다 말하기 + 역할극(A/B) 채점
- * - 사진 퀴즈: 사진 보고 알맞은 I'm going to ___. 고르기
+ * - 활동 카드: 카드마다 "언제 할까요?" 버튼 → 그 질문의 내 계획으로 연습하기에 담기
+ * - 연습: 나의 계획표 + 줄마다 말하기 + 역할극(A/B) 채점 + 친구 인터뷰 기록
  * ========================================================= */
 
 /* ---------- 음성 합성 (TTS) ---------- */
@@ -212,19 +211,13 @@ function makeCard(item, opts) {
   box.append(txt, speakBtn);
 
   div.append(top, visual, box);
-  if (opts.badges) {
-    const b = document.createElement("div");
-    b.className = "card-badges";
-    b.textContent = opts.badges;
-    div.appendChild(b);
-  }
+  if (opts.extra) div.appendChild(opts.extra);
   return div;
 }
 
 const findTime = key => TIMES.find(t => t.key === key) || null;
 const findAct = id => ACTIVITIES.find(a => a.id === id) || null;
 const catLabel = key => (ACT_CATS.find(c => c.key === key) || {}).label || "";
-const whenBadges = a => "⏰ " + a.when.map(k => findTime(k).short).join(" · ");
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function makeChip(text, cls, isOn, onClick) {
@@ -261,23 +254,50 @@ function renderActChips(wrap, selectedId, timeKey, onPick) {
 }
 
 /* ===========================================================
- * ❓ 질문하기
+ * 내 계획 (질문 5개 × 할 일 1개) · 저장
  * =========================================================== */
-function renderQuestions() {
-  const grid = document.getElementById("question-grid");
-  grid.innerHTML = "";
-  TIMES.forEach((t, i) => {
-    grid.appendChild(makeCard(
-      { en: questionEn(t), ko: questionKo(t), emoji: t.emoji, wiki: t.wiki },
-      { tone: i % 6, tag: `Q${i + 1} · ${t.short}`, badges: "💬 I'm going to ___." }
-    ));
-  });
+let plans = {};          // { afternoon: "kite", ... } (활동 id)
+let myName = "";
+let stats = {};          // 문장별 정확도 기록
+let interview = { name: "", answers: ["", "", "", "", ""], reacted: [false, false, false, false, false] };
+
+try {
+  const saved = JSON.parse(localStorage.getItem("plan_sets") || "null");
+  if (saved) {
+    if (saved.plans) plans = saved.plans;
+    if (saved.name) myName = saved.name;
+  }
+  const iv = JSON.parse(localStorage.getItem("plan_interview") || "null");
+  if (iv && Array.isArray(iv.answers)) interview = Object.assign(interview, iv);
+  stats = JSON.parse(localStorage.getItem("plan_stats") || "{}") || {};
+} catch (e) {}
+
+function persist() {
+  try {
+    localStorage.setItem("plan_sets", JSON.stringify({ plans, name: myName }));
+    localStorage.setItem("plan_interview", JSON.stringify(interview));
+    localStorage.setItem("plan_stats", JSON.stringify(stats));
+  } catch (e) {}
+}
+const planAct = key => findAct(plans[key]);
+const doneCount = () => TIMES.filter(t => planAct(t.key)).length;
+function updatePlanBadge() {
+  document.getElementById("plan-count").textContent = `${doneCount()}/${TIMES.length}`;
+}
+
+/* 잠깐 떴다 사라지는 알림 */
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 2600);
 }
 
 /* ===========================================================
- * 🎨 활동 카드
+ * 🎨 활동 카드 (카드마다 "언제 할까요?" → 연습하기에 담기)
  * =========================================================== */
-let actLevel = "basic";
 let actCat = "all";
 let actTime = "all";
 
@@ -301,6 +321,55 @@ function renderActivityFilters() {
   });
 }
 
+function makeTimePicker(a) {
+  const wrap = document.createElement("div");
+  wrap.className = "time-pick";
+  const lab = document.createElement("div");
+  lab.className = "tp-label";
+  lab.textContent = "🎯 언제 할까요? (눌러서 연습하기에 담기)";
+  const row = document.createElement("div");
+  row.className = "tp-row";
+  TIMES.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "tp-btn" + (a.when.includes(t.key) ? " rec" : "");
+    b.dataset.act = a.id;
+    b.dataset.time = t.key;
+    b.title = questionEn(t);
+    b.textContent = `${a.when.includes(t.key) ? "⭐ " : ""}${t.emoji} ${t.short}`;
+    b.addEventListener("click", () => pickPlan(t, a));
+    row.appendChild(b);
+  });
+  wrap.append(lab, row);
+  return wrap;
+}
+
+function pickPlan(t, a) {
+  const prev = planAct(t.key);
+  if (prev && prev.id === a.id) {
+    delete plans[t.key];
+    toast(`${t.emoji} ${t.short} 계획을 뺐어요.`);
+  } else {
+    plans[t.key] = a.id;
+    toast(prev
+      ? `${t.emoji} ${t.short} 계획을 바꿨어요: ${prev.en} → ${a.en}`
+      : `${t.emoji} ${t.short}: I'm going to ${a.en}. 연습하기에 담았어요!`);
+    speak(`${questionEn(t)} ${answerEn(a)}`);
+  }
+  persist();
+  refreshPickers();
+}
+
+/* 사진을 다시 불러오지 않도록 버튼 색만 바꿔요 */
+function refreshPickers() {
+  document.querySelectorAll(".tp-btn").forEach(b => {
+    b.classList.toggle("on", plans[b.dataset.time] === b.dataset.act);
+  });
+  document.querySelectorAll("#activity-grid .card").forEach(c => {
+    c.classList.toggle("picked", !!c.querySelector(".tp-btn.on"));
+  });
+  updatePlanBadge();
+}
+
 function renderActivities() {
   const grid = document.getElementById("activity-grid");
   grid.innerHTML = "";
@@ -308,23 +377,13 @@ function renderActivities() {
     (actCat === "all" || a.cat === actCat) && (actTime === "all" || a.when.includes(actTime)));
   list.forEach((a, i) => {
     grid.appendChild(makeCard(
-      { en: answerEn(a, actLevel), ko: answerKo(a, actLevel), emoji: a.emoji, wiki: a.wiki, photo: a.photo },
-      { tone: i % 6, tag: catLabel(a.cat), badges: whenBadges(a) }
+      { en: answerEn(a), ko: answerKo(a), emoji: a.emoji, wiki: a.wiki, photo: a.photo },
+      { tone: i % 6, tag: catLabel(a.cat), extra: makeTimePicker(a) }
     ));
   });
   document.getElementById("activity-count").textContent = `${list.length}개`;
+  refreshPickers();
 }
-
-document.querySelectorAll(".level-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".level-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    actLevel = btn.dataset.level;
-    synth.cancel();
-    hidePopup();
-    renderActivities();
-  });
-});
 
 /* ===========================================================
  * 💬 대답하기 (빈칸 채우기 + 맞장구)
@@ -335,7 +394,7 @@ function ansLines() {
   const t = findTime(ansTime), a = findAct(ansAct), r = REACTIONS[ansReact];
   const lines = [];
   if (t) lines.push(questionEn(t));
-  if (a) lines.push(answerEn(a, "basic"));
+  if (a) lines.push(answerEn(a));
   if (r) lines.push(r.en);
   return lines;
 }
@@ -372,7 +431,7 @@ function renderAnswer(autoSpeak) {
   }
 }
 document.getElementById("ans-speak-q").addEventListener("click", () => { const t = findTime(ansTime); if (t) speak(questionEn(t)); });
-document.getElementById("ans-speak-a").addEventListener("click", () => { const a = findAct(ansAct); if (a) speak(answerEn(a, "basic")); });
+document.getElementById("ans-speak-a").addEventListener("click", () => { const a = findAct(ansAct); if (a) speak(answerEn(a)); });
 document.getElementById("ans-speak-r").addEventListener("click", () => { const r = REACTIONS[ansReact]; if (r) speak(r.en); });
 document.getElementById("ans-listen").addEventListener("click", () => speak(ansLines().join(" ")));
 document.getElementById("ans-random").addEventListener("click", () => {
@@ -390,115 +449,8 @@ function renderReactions() {
 }
 
 /* ===========================================================
- * 🗓️ 내 계획표 (질문 5개 × 할 일 1개)
+ * 📝 나의 계획표 (연습하기 탭)
  * =========================================================== */
-let plans = {};          // { afternoon: "kite", ... } (활동 id)
-let planLevel = "basic";
-let curPlan = 0;
-let myName = "";
-let stats = {};          // 문장별 정확도 기록
-let interview = { name: "", answers: ["", "", "", "", ""], reacted: [false, false, false, false, false] };
-
-try {
-  const saved = JSON.parse(localStorage.getItem("plan_sets") || "null");
-  if (saved) {
-    if (saved.plans) plans = saved.plans;
-    if (saved.level === "plus") planLevel = "plus";
-    if (saved.name) myName = saved.name;
-  }
-  const iv = JSON.parse(localStorage.getItem("plan_interview") || "null");
-  if (iv && Array.isArray(iv.answers)) interview = Object.assign(interview, iv);
-  stats = JSON.parse(localStorage.getItem("plan_stats") || "{}") || {};
-} catch (e) {}
-
-function persist() {
-  try {
-    localStorage.setItem("plan_sets", JSON.stringify({ plans, level: planLevel, name: myName }));
-    localStorage.setItem("plan_interview", JSON.stringify(interview));
-    localStorage.setItem("plan_stats", JSON.stringify(stats));
-  } catch (e) {}
-}
-const planAct = key => findAct(plans[key]);
-const doneCount = () => TIMES.filter(t => planAct(t.key)).length;
-
-function updatePlanBadge() {
-  document.getElementById("plan-count").textContent = `${doneCount()}/${TIMES.length}`;
-  const wrap = document.getElementById("plan-tabs");
-  wrap.innerHTML = "";
-  TIMES.forEach((t, i) => {
-    const a = planAct(t.key);
-    const b = document.createElement("button");
-    b.className = "set-tab" + (i === curPlan ? " active" : "") + (a ? " done" : "");
-    b.textContent = `${t.emoji} ${t.short}${a ? " " + a.emoji + " ✓" : ""}`;
-    b.addEventListener("click", () => { curPlan = i; synth.cancel(); lastPlanSpoken = ""; renderPlan(); });
-    wrap.appendChild(b);
-  });
-}
-
-let lastPlanSpoken = "";
-function renderPlan(autoSpeak) {
-  const t = TIMES[curPlan];
-  const a = planAct(t.key);
-  updatePlanBadge();
-
-  document.querySelectorAll("#plan-level .cat-btn").forEach(b => b.classList.toggle("active", b.dataset.level === planLevel));
-  const q = document.getElementById("plan-q");
-  q.innerHTML = ""; q.appendChild(buildWords(questionEn(t)));
-  document.getElementById("plan-q-ko").textContent = questionKo(t);
-  setBlank("plan-act", a && (planLevel === "plus" ? `${a.en} ${a.ext.en}` : a.en));
-  document.getElementById("plan-act-ko").textContent = a ? answerKo(a, planLevel) : "나는 ________ 거야.";
-
-  const ph = document.getElementById("plan-photo");
-  ph.innerHTML = "";
-  ph.appendChild(makeVisual(a || t));
-
-  const status = document.getElementById("plan-status");
-  status.className = "dlg-status" + (a ? " ok" : "");
-  if (!a) status.textContent = `${t.emoji} ${t.short}에 무엇을 할 건가요? 아래에서 할 일을 골라요 👇 (⭐ 추천)`;
-  else if (!a.when.includes(t.key)) {
-    status.className = "dlg-status warn";
-    status.textContent = `🤔 ${t.short}에 ${a.en}? 조금 바쁠 수도 있어요! 그래도 정말 할 거라면 OK 👍`;
-  } else status.textContent = `✅ ${t.short} 계획 완성! ${doneCount() < TIMES.length ? "다음 칸도 만들어 보세요." : "5개 모두 완성! 📝 계획표를 보고 🎤 연습으로 가요."}`;
-
-  renderActChips(document.getElementById("plan-acts"), plans[t.key], t.key, x => {
-    plans[t.key] = x.id; persist(); renderPlan(true);
-  });
-
-  const listen = document.getElementById("plan-listen");
-  listen.disabled = !a;
-  renderPlanSummary();
-  if (a && autoSpeak) {
-    const en = `${questionEn(t)} ${answerEn(a, planLevel)}`;
-    if (en !== lastPlanSpoken) { lastPlanSpoken = en; speak(en); }
-  }
-}
-
-document.querySelectorAll("#plan-level .cat-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    planLevel = btn.dataset.level; lastPlanSpoken = ""; persist(); renderPlan(true);
-  });
-});
-document.getElementById("plan-speak-q").addEventListener("click", () => speak(questionEn(TIMES[curPlan])));
-document.getElementById("plan-speak-a").addEventListener("click", () => {
-  const a = planAct(TIMES[curPlan].key); if (a) speak(answerEn(a, planLevel));
-});
-document.getElementById("plan-listen").addEventListener("click", () => {
-  const t = TIMES[curPlan], a = planAct(t.key);
-  if (a) speak(`${questionEn(t)} ${answerEn(a, planLevel)}`);
-});
-document.getElementById("plan-random").addEventListener("click", () => {
-  const t = TIMES[curPlan];
-  const used = new Set(Object.values(plans));
-  const pool = ACTIVITIES.filter(a => a.when.includes(t.key) && !used.has(a.id));
-  plans[t.key] = pick(pool.length ? pool : ACTIVITIES.filter(a => a.when.includes(t.key))).id;
-  persist(); renderPlan(true);
-});
-document.getElementById("plan-clear").addEventListener("click", () => {
-  delete plans[TIMES[curPlan].key];
-  synth.cancel(); persist(); renderPlan();
-});
-
-/* 📝 나의 계획표 */
 function renderPlanSummary() {
   const box = document.getElementById("plan-summary");
   box.innerHTML = "";
@@ -517,16 +469,26 @@ function renderPlanSummary() {
     body.className = "plan-body";
     const qEl = document.createElement("div"); qEl.className = "plan-q"; qEl.appendChild(buildWords("Q. " + questionEn(t)));
     const aEl = document.createElement("div"); aEl.className = "plan-a";
-    if (a) aEl.appendChild(buildWords("A. " + answerEn(a, planLevel)));
+    if (a) aEl.appendChild(buildWords("A. " + answerEn(a)));
     else aEl.textContent = "A. I'm going to ________.";
-    const ko = document.createElement("div"); ko.className = "ko"; ko.textContent = a ? answerKo(a, planLevel) : "아직 고르지 않았어요";
+    const ko = document.createElement("div"); ko.className = "ko"; ko.textContent = a ? answerKo(a) : "🎨 활동 카드에서 골라요";
     body.append(qEl, aEl, ko);
-    const emo = document.createElement("div"); emo.className = "plan-emoji"; emo.textContent = a ? a.emoji : "❔";
+    const visual = a ? makeVisual(a, "plan-thumb") : document.createElement("div");
+    if (!a) { visual.className = "plan-emoji"; visual.textContent = "❔"; }
+    const tools = document.createElement("div");
+    tools.className = "plan-tools";
     const btn = document.createElement("button");
     btn.className = "speak-btn small"; btn.textContent = "🔊"; btn.disabled = !a;
     btn.setAttribute("aria-label", "듣기");
-    btn.addEventListener("click", () => a && speak(`${questionEn(t)} ${answerEn(a, planLevel)}`));
-    row.append(when, body, emo, btn);
+    btn.addEventListener("click", () => a && speak(`${questionEn(t)} ${answerEn(a)}`));
+    tools.appendChild(btn);
+    if (a) {
+      const del = document.createElement("button");
+      del.className = "premove"; del.textContent = "✕"; del.title = "계획 빼기";
+      del.addEventListener("click", () => { delete plans[t.key]; persist(); refreshPickers(); renderPractice(); });
+      tools.appendChild(del);
+    }
+    row.append(when, body, visual, tools);
     box.appendChild(row);
   });
 }
@@ -737,7 +699,7 @@ function planLines(t, a, idx) {
   const r = REACTIONS[idx % REACTIONS.length];
   return [
     { who: "A", en: questionEn(t), ko: questionKo(t) },
-    { who: "B", en: answerEn(a, planLevel), ko: answerKo(a, planLevel) },
+    { who: "B", en: answerEn(a), ko: answerKo(a) },
     { who: "A", en: r.en, ko: r.ko },
   ];
 }
@@ -802,6 +764,7 @@ function makePlanCard(t, a, idx) {
 }
 
 function renderPractice() {
+  renderPlanSummary();
   renderInterview();
   const empty = document.getElementById("practice-empty");
   const list = document.getElementById("practice-list");
@@ -813,94 +776,19 @@ function renderPractice() {
   if (done.length < TIMES.length) {
     const note = document.createElement("p");
     note.className = "practice-empty";
-    note.innerHTML = `아직 <b>${TIMES.length - done.length}칸</b>이 비어 있어요. <b>🗓️ 내 계획표</b>에서 마저 만들어 보세요.`;
+    note.innerHTML = `아직 <b>${TIMES.length - done.length}칸</b>이 비어 있어요. <b>🎨 활동 카드</b>에서 마저 골라 보세요.`;
     list.appendChild(note);
   }
 }
 
-/* ===========================================================
- * 🧩 사진 퀴즈
- * =========================================================== */
-let quiz = null;
-let quizRight = 0, quizTotal = 0;
-
-function newQuiz() {
-  const prev = quiz && quiz.act.id;
-  let a;
-  do { a = pick(ACTIVITIES); } while (a.id === prev);
-  const t = findTime(pick(a.when));
-  const others = ACTIVITIES.filter(x => x.id !== a.id && x.cat !== a.cat);
-  const wrong = [];
-  while (wrong.length < 2) {
-    const w = pick(others);
-    if (!wrong.includes(w)) wrong.push(w);
-  }
-  const options = [a, ...wrong].sort(() => Math.random() - 0.5);
-  quiz = { act: a, time: t, options, answered: false };
-  renderQuiz();
-}
-
-function renderQuiz() {
-  const { act, time, options } = quiz;
-  const ph = document.getElementById("quiz-photo");
-  ph.innerHTML = "";
-  ph.appendChild(makeVisual(act));
-  const qe = document.getElementById("quiz-q-en");
-  qe.innerHTML = ""; qe.appendChild(buildWords(questionEn(time)));
-  document.getElementById("quiz-q-ko").textContent = questionKo(time);
-  const optWrap = document.getElementById("quiz-options");
-  optWrap.innerHTML = "";
-  options.forEach((o, i) => {
-    const b = document.createElement("button");
-    b.className = "quiz-opt";
-    b.innerHTML = `<span class="quiz-num">${"①②③"[i]}</span>`;
-    b.appendChild(document.createTextNode(answerEn(o, "basic")));
-    b.addEventListener("click", () => answerQuiz(o, b));
-    optWrap.appendChild(b);
-  });
-  document.getElementById("quiz-feedback").innerHTML = "";
-  document.getElementById("quiz-score").textContent = `${quizRight} / ${quizTotal}`;
-}
-
-function answerQuiz(o, btn) {
-  if (quiz.answered) return;
-  const fb = document.getElementById("quiz-feedback");
-  const ok = o.id === quiz.act.id;
-  if (ok) {
-    quiz.answered = true;
-    if (!quiz.missed) quizRight++;
-    quizTotal++;
-    btn.classList.add("right");
-    document.querySelectorAll(".quiz-opt").forEach(b => { b.disabled = true; });
-    fb.innerHTML = `<div class="quiz-ok">🎉 정답! ${answerKo(o, "basic")}</div>`;
-    fb.appendChild(makeSpeakRow(answerEn(o, "basic"), "🎙️ 따라 말해 볼까요?", null));
-    speak(answerEn(o, "basic"));
-  } else {
-    quiz.missed = true;
-    btn.classList.add("wrong");
-    btn.disabled = true;
-    fb.innerHTML = `<div class="quiz-no">🤔 다시 골라 볼까요? 사진을 잘 보세요!</div>`;
-  }
-  document.getElementById("quiz-score").textContent = `${quizRight} / ${quizTotal}`;
-}
-document.getElementById("quiz-speak").addEventListener("click", () => speak(questionEn(quiz.time)));
-document.getElementById("quiz-next").addEventListener("click", () => {
-  if (quiz && !quiz.answered) quizTotal++;
-  newQuiz(); speak(questionEn(quiz.time));
-});
-
 /* ---------- 초기 렌더 ---------- */
 function renderAll() {
-  renderQuestions();
   renderActivityFilters();
   renderActivities();
   renderAnswer();
   renderReactions();
-  renderPlan();
   if (document.getElementById("tab-practice").classList.contains("active")) renderPractice();
-  if (quiz) renderQuiz();
 }
-newQuiz();
 renderAll();
 
 /* ---------- 사진 켜기/끄기 ---------- */
@@ -924,7 +812,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     synth.cancel();
     hidePopup();
     if (btn.dataset.tab === "practice") renderPractice();
-    if (btn.dataset.tab === "build") { lastPlanSpoken = ""; renderPlan(); }
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 });
